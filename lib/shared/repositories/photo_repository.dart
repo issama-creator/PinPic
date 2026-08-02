@@ -20,13 +20,14 @@ class PhotoRepository {
 
   Future<List<String>> distinctCategories() async {
     final photos = await _isar.photos.filter().categoryIsNotNull().findAll();
-    final categories = photos
-        .map((photo) => photo.category)
-        .whereType<String>()
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final categories =
+        photos
+            .map((photo) => photo.category)
+            .whereType<String>()
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     return categories;
   }
 
@@ -34,14 +35,7 @@ class PhotoRepository {
     return _isar.photos.filter().mediaIdEqualTo(mediaId).findFirst();
   }
 
-  Future<PhotoEntity?> findByHash(String hash) {
-    return _isar.photos.filter().hashEqualTo(hash).findFirst();
-  }
-
-  Future<List<PhotoEntity>> getAll({
-    int offset = 0,
-    int limit = 40,
-  }) {
+  Future<List<PhotoEntity>> getAll({int offset = 0, int limit = 40}) {
     return _isar.photos
         .where()
         .sortByDateTakenDesc()
@@ -50,10 +44,7 @@ class PhotoRepository {
         .findAll();
   }
 
-  Future<List<PhotoEntity>> getFavorites({
-    int offset = 0,
-    int limit = 40,
-  }) {
+  Future<List<PhotoEntity>> getFavorites({int offset = 0, int limit = 40}) {
     return _isar.photos
         .filter()
         .isFavoriteEqualTo(true)
@@ -66,10 +57,13 @@ class PhotoRepository {
   Future<void> upsert(PhotoEntity photo) async {
     try {
       await _isar.writeTxn(() async {
-        final existing =
-            await _isar.photos.filter().mediaIdEqualTo(photo.mediaId).findFirst();
+        final existing = await _isar.photos
+            .filter()
+            .mediaIdEqualTo(photo.mediaId)
+            .findFirst();
         if (existing != null) {
           photo.id = existing.id;
+          photo.isFavorite = existing.isFavorite;
         }
         await _isar.photos.put(photo);
       });
@@ -85,13 +79,15 @@ class PhotoRepository {
     if (photos.isEmpty) return;
     try {
       await _isar.writeTxn(() async {
-        for (final photo in photos) {
-          final existing = await _isar.photos
-              .filter()
-              .mediaIdEqualTo(photo.mediaId)
-              .findFirst();
+        final existingPhotos = await _isar.photos.getAllByMediaId(
+          photos.map((photo) => photo.mediaId).toList(growable: false),
+        );
+        for (var index = 0; index < photos.length; index++) {
+          final photo = photos[index];
+          final existing = existingPhotos[index];
           if (existing != null) {
             photo.id = existing.id;
+            photo.isFavorite = existing.isFavorite;
           }
         }
         await _isar.photos.putAll(photos);
@@ -106,8 +102,10 @@ class PhotoRepository {
 
   Future<void> setFavorite(String mediaId, bool isFavorite) async {
     await _isar.writeTxn(() async {
-      final photo =
-          await _isar.photos.filter().mediaIdEqualTo(mediaId).findFirst();
+      final photo = await _isar.photos
+          .filter()
+          .mediaIdEqualTo(mediaId)
+          .findFirst();
       if (photo == null) return;
       photo.isFavorite = isFavorite;
       await _isar.photos.put(photo);
@@ -121,12 +119,156 @@ class PhotoRepository {
   }
 
   Future<Set<String>> existingMediaIds() async {
-    final photos = await _isar.photos.where().findAll();
-    return photos.map((photo) => photo.mediaId).toSet();
+    final mediaIds = await _isar.photos.where().mediaIdProperty().findAll();
+    return mediaIds.toSet();
   }
 
-  Future<Set<String>> existingHashes() async {
-    final photos = await _isar.photos.where().findAll();
-    return photos.map((photo) => photo.hash).toSet();
+  Future<Map<String, PhotoEntity>> getByMediaIds(
+    Iterable<String> mediaIds,
+  ) async {
+    final ids = mediaIds.toList(growable: false);
+    if (ids.isEmpty) return const {};
+    final photos = await _isar.photos.getAllByMediaId(ids);
+    return {
+      for (final photo in photos)
+        if (photo != null) photo.mediaId: photo,
+    };
+  }
+
+  Future<int> deleteMissingMediaIds(Set<String> deviceMediaIds) async {
+    final indexedIds = await existingMediaIds();
+    final removed = indexedIds.difference(deviceMediaIds);
+    if (removed.isEmpty) return 0;
+    return _isar.writeTxn(
+      () => _isar.photos.deleteAllByMediaId(removed.toList(growable: false)),
+    );
+  }
+
+  Future<int> countWithOcr() {
+    return _isar.photos.filter().ocrTextIsNotNull().ocrTextIsNotEmpty().count();
+  }
+
+  Future<int> countWithObjects() {
+    return _isar.photos.filter().objectsIsNotEmpty().count();
+  }
+
+  Future<List<String>> suggestKeywords(String prefix, {int limit = 12}) async {
+    final needle = prefix.trim().toLowerCase();
+    if (needle.isEmpty) return const [];
+
+    final photos = await _isar.photos.where().limit(500).findAll();
+    final matches = <String>{};
+    for (final photo in photos) {
+      for (final keyword in photo.keywords) {
+        if (keyword.toLowerCase().startsWith(needle)) {
+          matches.add(keyword);
+        }
+      }
+      final category = photo.category;
+      if (category != null && category.toLowerCase().startsWith(needle)) {
+        matches.add(category);
+      }
+      if (matches.length >= limit * 3) break;
+    }
+
+    final list = matches.toList()..sort();
+    return list.take(limit).toList(growable: false);
+  }
+
+  Future<Set<String>> keywordVocabulary({int limit = 3000}) async {
+    final keywordLists = await _isar.photos
+        .where()
+        .limit(limit)
+        .keywordsProperty()
+        .findAll();
+    return {
+      for (final keywords in keywordLists)
+        for (final keyword in keywords)
+          if (keyword.trim().isNotEmpty) keyword.toLowerCase(),
+    };
+  }
+
+  Future<List<PhotoEntity>> searchCandidatesForTokens({
+    required Set<String> tokens,
+    String? category,
+    bool favoritesOnly = false,
+    int limit = 600,
+  }) async {
+    if (tokens.isEmpty) {
+      // Quick category tiles pass a category with no free-text query. Query
+      // the (indexed) `category` field directly instead of scanning only the
+      // most recent `limit` photos overall — otherwise a category whose
+      // matches aren't among the newest photos would silently look empty
+      // once a library has more photos than the fetch limit.
+      if (category != null && category.trim().isNotEmpty) {
+        final byCategory = await _isar.photos
+            .where()
+            .categoryEqualTo(category)
+            .findAll();
+        byCategory.sort((a, b) {
+          final aDate = a.dateTaken ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final bDate = b.dateTaken ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return bDate.compareTo(aDate);
+        });
+        final limited = byCategory.length > limit
+            ? byCategory.sublist(0, limit)
+            : byCategory;
+        return _applyFilters(limited, null, favoritesOnly);
+      }
+      final all = favoritesOnly
+          ? await getFavorites(limit: limit)
+          : await getAll(limit: limit);
+      return _applyFilters(all, category, favoritesOnly);
+    }
+
+    final candidates = <String, PhotoEntity>{};
+    final perTokenLimit = (limit ~/ tokens.length).clamp(40, limit);
+    for (final token in tokens) {
+      final exact = await _isar.photos
+          .where()
+          .keywordsElementEqualTo(token)
+          .limit(perTokenLimit)
+          .findAll();
+      for (final photo in exact) {
+        candidates[photo.mediaId] = photo;
+      }
+
+      if (token.length >= 3 && candidates.length < limit) {
+        final prefix = await _isar.photos
+            .where()
+            .keywordsElementStartsWith(token)
+            .limit(perTokenLimit)
+            .findAll();
+        for (final photo in prefix) {
+          candidates[photo.mediaId] = photo;
+        }
+      }
+      if (candidates.length >= limit) break;
+    }
+
+    return _applyFilters(
+      candidates.values.take(limit).toList(growable: false),
+      category,
+      favoritesOnly,
+    );
+  }
+
+  List<PhotoEntity> _applyFilters(
+    List<PhotoEntity> photos,
+    String? category,
+    bool favoritesOnly,
+  ) {
+    final normalizedCategory = category?.trim().toLowerCase();
+    return photos
+        .where((photo) {
+          if (favoritesOnly && !photo.isFavorite) return false;
+          if (normalizedCategory != null &&
+              normalizedCategory.isNotEmpty &&
+              (photo.category ?? '').toLowerCase() != normalizedCategory) {
+            return false;
+          }
+          return true;
+        })
+        .toList(growable: false);
   }
 }

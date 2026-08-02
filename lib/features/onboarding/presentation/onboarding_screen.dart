@@ -15,20 +15,13 @@ abstract final class _OnboardingStyle {
   static const bg = Color(0xFF050510);
 
   static const titleGradient = LinearGradient(
-    colors: [
-      Color(0xFFB56CFF),
-      Color(0xFF6B8CFF),
-      Color(0xFF3DD7FF),
-    ],
+    colors: [Color(0xFFB56CFF), Color(0xFF6B8CFF), Color(0xFF3DD7FF)],
   );
 
   static const glassFill = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0xEB2A1B45),
-      Color(0xE0151028),
-    ],
+    colors: [Color(0xEB2A1B45), Color(0xE0151028)],
   );
 }
 
@@ -82,10 +75,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             PageView(
               controller: _controller,
               onPageChanged: (value) => setState(() => _page = value),
-              children: const [
-                _SmartSearchPage(),
-                _PrivacyPage(),
-              ],
+              children: const [_SmartSearchPage(), _PrivacyPage()],
             ),
             Positioned(
               left: 24,
@@ -124,42 +114,17 @@ class _SmartSearchPage extends StatelessWidget {
 
   // Asymmetric scatter around the phone — closer to center.
   static const _tags = [
-    _TagData(
-      'Паспорт',
-      Alignment(-0.61, -0.22),
-      rotation: -0.06,
-      scale: 0.94,
-    ),
+    _TagData('Паспорт', Alignment(-0.61, -0.22), rotation: -0.06, scale: 0.94),
     _TagData(
       'Пароли Wi-Fi',
       Alignment(0.59, -0.28),
       rotation: 0.05,
       scale: 0.98,
     ),
-    _TagData(
-      'Билеты',
-      Alignment(-0.65, 0.04),
-      rotation: 0.04,
-      scale: 1.0,
-    ),
-    _TagData(
-      'QR-код',
-      Alignment(0.61, 0.08),
-      rotation: -0.05,
-      scale: 0.96,
-    ),
-    _TagData(
-      'Визитка',
-      Alignment(-0.58, 0.36),
-      rotation: -0.03,
-      scale: 0.97,
-    ),
-    _TagData(
-      'Скриншот',
-      Alignment(0.58, 0.42),
-      rotation: 0.06,
-      scale: 1.0,
-    ),
+    _TagData('Билеты', Alignment(-0.65, 0.04), rotation: 0.04, scale: 1.0),
+    _TagData('QR-код', Alignment(0.61, 0.08), rotation: -0.05, scale: 0.96),
+    _TagData('Визитка', Alignment(-0.58, 0.36), rotation: -0.03, scale: 0.97),
+    _TagData('Скриншот', Alignment(0.58, 0.42), rotation: 0.06, scale: 1.0),
   ];
 
   @override
@@ -228,8 +193,7 @@ class _SmartSearchPage extends StatelessWidget {
                     )
                     .animate(
                       delay: (900 + 90 * index).ms,
-                      onPlay: (controller) =>
-                          controller.repeat(reverse: true),
+                      onPlay: (controller) => controller.repeat(reverse: true),
                     )
                     .moveY(
                       begin: 0,
@@ -310,11 +274,11 @@ class _FloatingTag extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              letterSpacing: 0.1,
-            ),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+          letterSpacing: 0.1,
+        ),
       ),
     );
   }
@@ -326,34 +290,27 @@ class _OnboardingHeroText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.displaySmall?.copyWith(
-          fontSize: 38,
-          fontWeight: FontWeight.w800,
-          height: 1.12,
-          letterSpacing: -0.6,
-          color: Colors.white,
-          shadows: [
-            Shadow(
-              color: AppColors.purple.withValues(alpha: 0.35),
-              blurRadius: 18,
-            ),
-          ],
-        );
+      fontSize: 38,
+      fontWeight: FontWeight.w800,
+      height: 1.12,
+      letterSpacing: -0.6,
+      color: Colors.white,
+      shadows: [
+        Shadow(color: AppColors.purple.withValues(alpha: 0.35), blurRadius: 18),
+      ],
+    );
 
     final subtitleStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          height: 1.45,
-          letterSpacing: 0.1,
-          color: const Color(0xFFB7B7C8),
-        );
+      fontSize: 16,
+      fontWeight: FontWeight.w400,
+      height: 1.45,
+      letterSpacing: 0.1,
+      color: const Color(0xFFB7B7C8),
+    );
 
     return Column(
       children: [
-        Text(
-          'Не можете',
-          textAlign: TextAlign.center,
-          style: titleStyle,
-        ),
+        Text('Не можете', textAlign: TextAlign.center, style: titleStyle),
         const SizedBox(height: 2),
         Text.rich(
           TextSpan(
@@ -421,20 +378,20 @@ class _PrivacyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.displaySmall?.copyWith(
-          fontSize: 36,
-          fontWeight: FontWeight.w800,
-          height: 0.94,
-          letterSpacing: -0.6,
-          color: Colors.white,
-        );
+      fontSize: 36,
+      fontWeight: FontWeight.w800,
+      height: 0.94,
+      letterSpacing: -0.6,
+      color: Colors.white,
+    );
 
     final subtitleStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
-          fontSize: 15,
-          fontWeight: FontWeight.w400,
-          height: 1.4,
-          letterSpacing: 0.1,
-          color: const Color(0xFFB7B7C8),
-        );
+      fontSize: 15,
+      fontWeight: FontWeight.w400,
+      height: 1.4,
+      letterSpacing: 0.1,
+      color: const Color(0xFFB7B7C8),
+    );
 
     return ColoredBox(
       color: _OnboardingStyle.bg,
@@ -448,8 +405,7 @@ class _PrivacyPage extends StatelessWidget {
               builder: (context, constraints) {
                 final height = constraints.maxHeight;
                 final heroTop = (height * 0.03).clamp(18.0, 28.0) + 20;
-                final cardsTop =
-                    (height * 0.50).clamp(390.0, 430.0) + 20;
+                final cardsTop = (height * 0.50).clamp(390.0, 430.0) + 20;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -475,8 +431,9 @@ class _PrivacyPage extends StatelessWidget {
                               child: Text(
                                 'контролем',
                                 textAlign: TextAlign.center,
-                                style:
-                                    titleStyle?.copyWith(color: Colors.white),
+                                style: titleStyle?.copyWith(
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 26),
@@ -527,11 +484,11 @@ class _PrivacyPage extends StatelessWidget {
                               for (final entry
                                   in _features.asMap().entries) ...[
                                 _PrivacyFeatureRow(
-                                  icon: entry.value.icon,
-                                  title: entry.value.title,
-                                  text: entry.value.text,
-                                  glow: entry.value.glow,
-                                )
+                                      icon: entry.value.icon,
+                                      title: entry.value.title,
+                                      text: entry.value.text,
+                                      glow: entry.value.glow,
+                                    )
                                     .animate()
                                     .fadeIn(
                                       delay: (70 * entry.key).ms,
@@ -551,8 +508,7 @@ class _PrivacyPage extends StatelessWidget {
                                     thickness: 1,
                                     indent: 70,
                                     endIndent: 16,
-                                    color: Colors.white
-                                        .withValues(alpha: 0.04),
+                                    color: Colors.white.withValues(alpha: 0.04),
                                   ),
                               ],
                             ],
@@ -598,21 +554,9 @@ class _PrivacyLogo extends StatelessWidget {
             ),
             child: SizedBox.expand(),
           ),
-          const Positioned(
-            left: 18,
-            top: 44,
-            child: _BrandDot(size: 3),
-          ),
-          const Positioned(
-            right: 21,
-            top: 30,
-            child: _BrandDot(size: 2),
-          ),
-          const Positioned(
-            right: 26,
-            bottom: 28,
-            child: _BrandDot(size: 3),
-          ),
+          const Positioned(left: 18, top: 44, child: _BrandDot(size: 3)),
+          const Positioned(right: 21, top: 30, child: _BrandDot(size: 2)),
+          const Positioned(right: 26, bottom: 28, child: _BrandDot(size: 3)),
           Image.asset(
             'images/bgcunb/33.png',
             width: _logoSize,
@@ -670,9 +614,7 @@ class _PrivacyFeatureRow extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 color: glow.withValues(alpha: 0.16),
-                border: Border.all(
-                  color: glow.withValues(alpha: 0.32),
-                ),
+                border: Border.all(color: glow.withValues(alpha: 0.32)),
                 boxShadow: [
                   BoxShadow(
                     color: glow.withValues(alpha: 0.22),
@@ -691,11 +633,11 @@ class _PrivacyFeatureRow extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          height: 1.1,
-                          color: Colors.white,
-                        ),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      height: 1.1,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -703,11 +645,11 @@ class _PrivacyFeatureRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w400,
-                          height: 1.25,
-                          color: const Color(0xFFD0CCDD),
-                      ),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w400,
+                      height: 1.25,
+                      color: const Color(0xFFD0CCDD),
+                    ),
                   ),
                 ],
               ),

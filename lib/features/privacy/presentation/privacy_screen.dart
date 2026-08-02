@@ -20,7 +20,11 @@ class PrivacyScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.shield_rounded, color: AppColors.purple, size: 36),
+                  const Icon(
+                    Icons.shield_rounded,
+                    color: AppColors.purple,
+                    size: 36,
+                  ),
                   const SizedBox(height: 14),
                   Text(
                     '100% локально',

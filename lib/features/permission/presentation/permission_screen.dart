@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -23,27 +25,59 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
 
   Future<void> _requestAccess() async {
     setState(() => _loading = true);
-    final status =
-        await ref.read(permissionServiceProvider).requestPhotoPermission();
+    final status = await ref
+        .read(permissionServiceProvider)
+        .requestPhotoPermission();
     final granted = status.isGranted;
 
-    await ref.read(settingsRepositoryProvider).markPermission(
-          requested: true,
-          granted: granted,
-        );
+    await ref
+        .read(settingsRepositoryProvider)
+        .markPermission(requested: true, granted: granted);
 
     if (!mounted) return;
     setState(() => _loading = false);
 
     if (granted) {
-      final count = await ref.read(photoMediaServiceProvider).countDevicePhotos();
-      await ref.read(settingsRepositoryProvider).updateIndexStats(
+      final count = await ref
+          .read(photoMediaServiceProvider)
+          .countDevicePhotos();
+      await ref
+          .read(settingsRepositoryProvider)
+          .updateIndexStats(
             totalPhotosFound: count,
             totalIndexed: 0,
             totalCategories: 0,
           );
+      unawaited(ref.read(indexProgressProvider.notifier).start());
       if (!mounted) return;
       context.go(RoutePaths.finished);
+      return;
+    }
+
+    if (status == PhotoPermissionStatus.permanentlyDenied ||
+        status == PhotoPermissionStatus.restricted) {
+      final openSettings = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Разрешите доступ в настройках'),
+          content: const Text(
+            'Android больше не показывает запрос разрешения. Откройте настройки PinPic и разрешите доступ к фото и видео.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => context.pop(false),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () => context.pop(true),
+              child: const Text('Открыть настройки'),
+            ),
+          ],
+        ),
+      );
+      if (openSettings == true) {
+        await ref.read(permissionServiceProvider).openSystemSettings();
+      }
       return;
     }
 
@@ -54,9 +88,7 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
             style: const TextStyle(color: Colors.white),
             children: [
               const TextSpan(text: 'Нужен доступ к фото, чтобы '),
-              ...PinPicMark.spans(
-                const TextStyle(color: Colors.white),
-              ),
+              ...PinPicMark.spans(const TextStyle(color: Colors.white)),
               const TextSpan(text: ' мог искать.'),
             ],
           ),
@@ -67,10 +99,9 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
 
   Future<void> _later() async {
     await ref.read(settingsRepositoryProvider).markOnboardingCompleted();
-    await ref.read(settingsRepositoryProvider).markPermission(
-          requested: true,
-          granted: false,
-        );
+    await ref
+        .read(settingsRepositoryProvider)
+        .markPermission(requested: true, granted: false);
     if (!mounted) return;
     context.go(RoutePaths.home);
   }
@@ -103,26 +134,30 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                   children: [
                     Align(
                       alignment: const Alignment(0, -0.12),
-                      child: Text(
-                        'Разрешите доступ\nк фото',
-                        textAlign: TextAlign.center,
-                        style:
-                            Theme.of(context).textTheme.displaySmall?.copyWith(
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.05,
-                                  letterSpacing: -0.5,
-                                  color: Colors.white,
-                                ),
-                      )
-                          .animate()
-                          .fadeIn(duration: 700.ms, curve: Curves.easeOutCubic)
-                          .slideY(
-                            begin: 0.05,
-                            end: 0,
-                            duration: 700.ms,
-                            curve: Curves.easeOutCubic,
-                          ),
+                      child:
+                          Text(
+                                'Разрешите доступ\nк фото',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.displaySmall
+                                    ?.copyWith(
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.05,
+                                      letterSpacing: -0.5,
+                                      color: Colors.white,
+                                    ),
+                              )
+                              .animate()
+                              .fadeIn(
+                                duration: 700.ms,
+                                curve: Curves.easeOutCubic,
+                              )
+                              .slideY(
+                                begin: 0.05,
+                                end: 0,
+                                duration: 700.ms,
+                                curve: Curves.easeOutCubic,
+                              ),
                     ),
                     Align(
                       alignment: Alignment.bottomCenter,
@@ -184,9 +219,9 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                                   ),
                                   textAlign: TextAlign.center,
                                 ).animate().fadeIn(
-                                      delay: 180.ms,
-                                      duration: 700.ms,
-                                    ),
+                                  delay: 180.ms,
+                                  duration: 700.ms,
+                                ),
                                 const SizedBox(height: 14),
                                 const Text(
                                   'Данные остаются на устройстве.',
@@ -204,9 +239,9 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                                     ],
                                   ),
                                 ).animate().fadeIn(
-                                      delay: 200.ms,
-                                      duration: 700.ms,
-                                    ),
+                                  delay: 200.ms,
+                                  duration: 700.ms,
+                                ),
                                 const SizedBox(height: 18),
                                 GradientButton(
                                   label: _loading
@@ -215,9 +250,9 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                                   onPressed: _loading ? null : _requestAccess,
                                   height: 56,
                                 ).animate().fadeIn(
-                                      delay: 260.ms,
-                                      duration: 700.ms,
-                                    ),
+                                  delay: 260.ms,
+                                  duration: 700.ms,
+                                ),
                                 const SizedBox(height: 10),
                                 TextButton(
                                   onPressed: _loading ? null : _later,

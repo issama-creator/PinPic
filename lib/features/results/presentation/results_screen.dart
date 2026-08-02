@@ -1,57 +1,337 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pinpic/core/providers/core_providers.dart';
 import 'package:pinpic/routes/route_paths.dart';
+import 'package:pinpic/services/search_service.dart';
 import 'package:pinpic/theme/app_colors.dart';
 import 'package:pinpic/widgets/app_scaffold.dart';
-import 'package:pinpic/widgets/glass_container.dart';
+import 'package:pinpic/widgets/async_state_view.dart';
+import 'package:pinpic/widgets/photo_thumbnail.dart';
 
-class ResultsScreen extends StatelessWidget {
-  const ResultsScreen({super.key, required this.query});
+class ResultsScreen extends ConsumerStatefulWidget {
+  const ResultsScreen({
+    super.key,
+    required this.query,
+    this.category,
+    this.favoritesOnly = false,
+  });
 
   final String query;
+  final String? category;
+  final bool favoritesOnly;
+
+  @override
+  ConsumerState<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends ConsumerState<ResultsScreen> {
+  final _scrollController = ScrollController();
+  final _hits = <SearchHit>[];
+  bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  bool _similarFallback = false;
+  int _nextOffset = 0;
+  int _total = 0;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load(reset: true));
+  }
+
+  @override
+  void didUpdateWidget(covariant ResultsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.query != widget.query ||
+        oldWidget.category != widget.category ||
+        oldWidget.favoritesOnly != widget.favoritesOnly) {
+      _load(reset: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.extentAfter < 600 &&
+        _hasMore &&
+        !_loadingMore &&
+        !_loading) {
+      _load();
+    }
+  }
+
+  Future<void> _load({bool reset = false}) async {
+    if (reset) {
+      setState(() {
+        _loading = true;
+        _loadingMore = false;
+        _errorMessage = null;
+        _hits.clear();
+        _nextOffset = 0;
+      });
+    } else {
+      setState(() => _loadingMore = true);
+    }
+
+    try {
+      await ref.read(appBootstrapProvider.future);
+      final page = await ref
+          .read(searchServiceProvider)
+          .searchPage(
+            widget.query,
+            category: widget.category,
+            favoritesOnly: widget.favoritesOnly,
+            offset: reset ? 0 : _nextOffset,
+          );
+      if (!mounted) return;
+      setState(() {
+        _hits.addAll(page.items);
+        _nextOffset = page.nextOffset;
+        _hasMore = page.hasMore;
+        _total = page.total;
+        _similarFallback = page.isSimilarFallback;
+        _loading = false;
+        _loadingMore = false;
+      });
+      if (reset && widget.query.trim().isNotEmpty) {
+        await ref
+            .read(searchServiceProvider)
+            .remember(widget.query, resultCount: page.total);
+        ref.invalidate(recentSearchesProvider);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadingMore = false;
+        _errorMessage = 'Не удалось выполнить поиск';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.query.isNotEmpty
+        ? widget.query
+        : (widget.category ?? 'Результаты');
     return AppScaffold(
       appBar: AppBar(
-        title: Text(query.isEmpty ? 'Результаты' : query),
+        title: Text(title),
         actions: [
           IconButton(
-            onPressed: () => context.push(RoutePaths.filters),
+            onPressed: () async {
+              final applied = await context.push<Map<String, dynamic>>(
+                RoutePaths.filters,
+              );
+              if (applied == null || !context.mounted) return;
+              final nextCategory = applied['category'] as String?;
+              final nextFav = applied['favoritesOnly'] as bool? ?? false;
+              context.pushReplacement(
+                '${RoutePaths.results}?q=${Uri.encodeQueryComponent(widget.query)}'
+                '${nextCategory != null ? '&category=${Uri.encodeQueryComponent(nextCategory)}' : ''}'
+                '${nextFav ? '&fav=1' : ''}',
+              );
+            },
             icon: const Icon(Icons.tune_rounded),
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Поиск будет доступен после индексации',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              GlassContainer(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+      body: SafeArea(child: _buildBody(context)),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_errorMessage != null) {
+      return AppRetryState(
+        message: _errorMessage!,
+        onRetry: () => _load(reset: true),
+      );
+    }
+    if (_hits.isEmpty) {
+      final isCategoryOnly =
+          widget.query.trim().isEmpty && widget.category != null;
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ничего не найдено',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isCategoryOnly
+                  ? 'В этой категории пока нет проиндексированных фото'
+                  : 'Попробуйте: документ, чек, паспорт, QR',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _similarFallback
+                  ? 'Похожие результаты'
+                  : '$_total результат${_plural(_total)}',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.72,
+            ),
+            itemCount: _hits.length + (_loadingMore ? 2 : 0),
+            itemBuilder: (context, index) {
+              if (index >= _hits.length) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final hit = _hits[index];
+              return _ResultCard(
+                hit: hit,
+                onTap: () => context.push(
+                  RoutePaths.photoDetailsPath(hit.photo.mediaId),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _plural(int count) {
+    final mod10 = count % 10;
+    final mod100 = count % 100;
+    if (mod10 == 1 && mod100 != 11) return '';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+      return 'а';
+    }
+    return 'ов';
+  }
+}
+
+class _ResultCard extends ConsumerWidget {
+  const _ResultCard({required this.hit, required this.onTap});
+
+  final SearchHit hit;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Material(
+      color: const Color(0xFF16161F),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    const Icon(Icons.info_outline, color: AppColors.cyan),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Фундамент готов. OCR и умный поиск подключатся на следующем этапе.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                    PhotoThumbnail(
+                      mediaId: hit.photo.mediaId,
+                      filePath: hit.photo.path,
+                      width: 240,
+                      height: 240,
+                    ),
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.purple.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          '${hit.confidence}%',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hit.photo.displayName ?? hit.photo.category ?? 'Фото',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    hit.reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.3,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+

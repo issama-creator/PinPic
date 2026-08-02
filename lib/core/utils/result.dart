@@ -7,14 +7,14 @@ sealed class Result<T> {
   bool get isFailure => this is Err<T>;
 
   T? get valueOrNull => switch (this) {
-        Success<T>(:final value) => value,
-        Err<T>() => null,
-      };
+    Success<T>(:final value) => value,
+    Err<T>() => null,
+  };
 
   Failure? get failureOrNull => switch (this) {
-        Success<T>() => null,
-        Err<T>(:final failure) => failure,
-      };
+    Success<T>() => null,
+    Err<T>(:final failure) => failure,
+  };
 
   R when<R>({
     required R Function(T value) success,

@@ -20,10 +20,7 @@ class SearchHistoryRepository {
         .findAll();
   }
 
-  Future<void> add({
-    required String query,
-    int resultCount = 0,
-  }) async {
+  Future<void> add({required String query, int resultCount = 0}) async {
     final normalized = query.trim();
     if (normalized.isEmpty) return;
 
@@ -54,6 +51,12 @@ class SearchHistoryRepository {
           await _isar.searchHistory.delete(item.id);
         }
       }
+    });
+  }
+
+  Future<void> remove(Id id) async {
+    await _isar.writeTxn(() async {
+      await _isar.searchHistory.delete(id);
     });
   }
 

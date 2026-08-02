@@ -27,12 +27,7 @@ class SplashAtmosphere extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment(-0.2, -1.0),
                 end: Alignment(0.35, 1.0),
-                colors: [
-                  Color(0xFF3A1B66),
-                  _top,
-                  _mid,
-                  _base,
-                ],
+                colors: [Color(0xFF3A1B66), _top, _mid, _base],
                 stops: [0.0, 0.28, 0.62, 1.0],
               ),
             ),

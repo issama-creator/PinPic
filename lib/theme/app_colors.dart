@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const Color background = Color(0xFF05050A);
+  /// Flat dark — same base as Home / Favorites.
+  static const Color background = Color(0xFF050510);
   static const Color backgroundElevated = Color(0xFF0C0C14);
   static const Color surface = Color(0xFF12121C);
   static const Color surfaceGlass = Color(0x99181824);
   static const Color surfaceCard = Color(0xFF1A1A26);
+
+  /// Soft cool white — not harsh pure white.
+  static const Color lightBackground = Color(0xFFF6F7FB);
+  static const Color lightBackgroundElevated = Color(0xFFFFFFFF);
+  static const Color lightSurface = Color(0xFFF0F2F7);
+  static const Color lightSurfaceGlass = Color(0xE6FFFFFF);
+  static const Color lightSurfaceCard = Color(0xFFFFFFFF);
+  static const Color lightTextPrimary = Color(0xFF12121A);
+  static const Color lightTextSecondary = Color(0xFF3A3A48);
+  static const Color lightTextMuted = Color(0xFF5C5C6A);
+  static const Color lightBorder = Color(0x221A1A22);
 
   static const Color purple = Color(0xFFB02EFF);
   static const Color purpleDeep = Color(0xFF7B2FFF);
@@ -39,14 +51,27 @@ abstract final class AppColors {
     colors: [purple, purpleDeep, blue],
   );
 
+  /// Near-flat dark fill (no bright purple band). Matches Favorites / Home.
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [
-      Color(0xFF2A1250),
-      Color(0xFF140A28),
-      Color(0xFF0D0718),
-      Color(0xFF0B0614),
+      Color(0xFF08061A),
+      Color(0xFF050510),
+      Color(0xFF050510),
+      Color(0xFF050510),
+    ],
+    stops: [0.0, 0.22, 0.7, 1.0],
+  );
+
+  static const LinearGradient lightBackgroundGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xFFF3F0FA),
+      Color(0xFFF6F7FB),
+      Color(0xFFF8F9FC),
+      Color(0xFFF6F7FB),
     ],
     stops: [0.0, 0.35, 0.7, 1.0],
   );

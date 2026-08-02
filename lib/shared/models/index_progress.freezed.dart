@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$IndexProgress {
 
- int get processed; int get total; bool get isRunning; bool get isCompleted; String? get currentFileName;
+ int get processed; int get total; bool get isRunning; bool get isCompleted; IndexingStatus get status; String? get currentFileName; String? get errorMessage;
 /// Create a copy of IndexProgress
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $IndexProgressCopyWith<IndexProgress> get copyWith => _$IndexProgressCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is IndexProgress&&(identical(other.processed, processed) || other.processed == processed)&&(identical(other.total, total) || other.total == total)&&(identical(other.isRunning, isRunning) || other.isRunning == isRunning)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.currentFileName, currentFileName) || other.currentFileName == currentFileName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is IndexProgress&&(identical(other.processed, processed) || other.processed == processed)&&(identical(other.total, total) || other.total == total)&&(identical(other.isRunning, isRunning) || other.isRunning == isRunning)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.status, status) || other.status == status)&&(identical(other.currentFileName, currentFileName) || other.currentFileName == currentFileName)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,processed,total,isRunning,isCompleted,currentFileName);
+int get hashCode => Object.hash(runtimeType,processed,total,isRunning,isCompleted,status,currentFileName,errorMessage);
 
 @override
 String toString() {
-  return 'IndexProgress(processed: $processed, total: $total, isRunning: $isRunning, isCompleted: $isCompleted, currentFileName: $currentFileName)';
+  return 'IndexProgress(processed: $processed, total: $total, isRunning: $isRunning, isCompleted: $isCompleted, status: $status, currentFileName: $currentFileName, errorMessage: $errorMessage)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $IndexProgressCopyWith<$Res>  {
   factory $IndexProgressCopyWith(IndexProgress value, $Res Function(IndexProgress) _then) = _$IndexProgressCopyWithImpl;
 @useResult
 $Res call({
- int processed, int total, bool isRunning, bool isCompleted, String? currentFileName
+ int processed, int total, bool isRunning, bool isCompleted, IndexingStatus status, String? currentFileName, String? errorMessage
 });
 
 
@@ -65,13 +65,15 @@ class _$IndexProgressCopyWithImpl<$Res>
 
 /// Create a copy of IndexProgress
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? processed = null,Object? total = null,Object? isRunning = null,Object? isCompleted = null,Object? currentFileName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? processed = null,Object? total = null,Object? isRunning = null,Object? isCompleted = null,Object? status = null,Object? currentFileName = freezed,Object? errorMessage = freezed,}) {
   return _then(_self.copyWith(
 processed: null == processed ? _self.processed : processed // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,isRunning: null == isRunning ? _self.isRunning : isRunning // ignore: cast_nullable_to_non_nullable
 as bool,isCompleted: null == isCompleted ? _self.isCompleted : isCompleted // ignore: cast_nullable_to_non_nullable
-as bool,currentFileName: freezed == currentFileName ? _self.currentFileName : currentFileName // ignore: cast_nullable_to_non_nullable
+as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as IndexingStatus,currentFileName: freezed == currentFileName ? _self.currentFileName : currentFileName // ignore: cast_nullable_to_non_nullable
+as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -157,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int processed,  int total,  bool isRunning,  bool isCompleted,  String? currentFileName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int processed,  int total,  bool isRunning,  bool isCompleted,  IndexingStatus status,  String? currentFileName,  String? errorMessage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _IndexProgress() when $default != null:
-return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_that.currentFileName);case _:
+return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_that.status,_that.currentFileName,_that.errorMessage);case _:
   return orElse();
 
 }
@@ -178,10 +180,10 @@ return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int processed,  int total,  bool isRunning,  bool isCompleted,  String? currentFileName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int processed,  int total,  bool isRunning,  bool isCompleted,  IndexingStatus status,  String? currentFileName,  String? errorMessage)  $default,) {final _that = this;
 switch (_that) {
 case _IndexProgress():
-return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_that.currentFileName);case _:
+return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_that.status,_that.currentFileName,_that.errorMessage);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +200,10 @@ return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int processed,  int total,  bool isRunning,  bool isCompleted,  String? currentFileName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int processed,  int total,  bool isRunning,  bool isCompleted,  IndexingStatus status,  String? currentFileName,  String? errorMessage)?  $default,) {final _that = this;
 switch (_that) {
 case _IndexProgress() when $default != null:
-return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_that.currentFileName);case _:
+return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_that.status,_that.currentFileName,_that.errorMessage);case _:
   return null;
 
 }
@@ -213,14 +215,16 @@ return $default(_that.processed,_that.total,_that.isRunning,_that.isCompleted,_t
 @JsonSerializable()
 
 class _IndexProgress extends IndexProgress {
-  const _IndexProgress({this.processed = 0, this.total = 0, this.isRunning = false, this.isCompleted = false, this.currentFileName}): super._();
+  const _IndexProgress({this.processed = 0, this.total = 0, this.isRunning = false, this.isCompleted = false, this.status = IndexingStatus.idle, this.currentFileName, this.errorMessage}): super._();
   factory _IndexProgress.fromJson(Map<String, dynamic> json) => _$IndexProgressFromJson(json);
 
 @override@JsonKey() final  int processed;
 @override@JsonKey() final  int total;
 @override@JsonKey() final  bool isRunning;
 @override@JsonKey() final  bool isCompleted;
+@override@JsonKey() final  IndexingStatus status;
 @override final  String? currentFileName;
+@override final  String? errorMessage;
 
 /// Create a copy of IndexProgress
 /// with the given fields replaced by the non-null parameter values.
@@ -235,16 +239,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _IndexProgress&&(identical(other.processed, processed) || other.processed == processed)&&(identical(other.total, total) || other.total == total)&&(identical(other.isRunning, isRunning) || other.isRunning == isRunning)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.currentFileName, currentFileName) || other.currentFileName == currentFileName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _IndexProgress&&(identical(other.processed, processed) || other.processed == processed)&&(identical(other.total, total) || other.total == total)&&(identical(other.isRunning, isRunning) || other.isRunning == isRunning)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.status, status) || other.status == status)&&(identical(other.currentFileName, currentFileName) || other.currentFileName == currentFileName)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,processed,total,isRunning,isCompleted,currentFileName);
+int get hashCode => Object.hash(runtimeType,processed,total,isRunning,isCompleted,status,currentFileName,errorMessage);
 
 @override
 String toString() {
-  return 'IndexProgress(processed: $processed, total: $total, isRunning: $isRunning, isCompleted: $isCompleted, currentFileName: $currentFileName)';
+  return 'IndexProgress(processed: $processed, total: $total, isRunning: $isRunning, isCompleted: $isCompleted, status: $status, currentFileName: $currentFileName, errorMessage: $errorMessage)';
 }
 
 
@@ -255,7 +259,7 @@ abstract mixin class _$IndexProgressCopyWith<$Res> implements $IndexProgressCopy
   factory _$IndexProgressCopyWith(_IndexProgress value, $Res Function(_IndexProgress) _then) = __$IndexProgressCopyWithImpl;
 @override @useResult
 $Res call({
- int processed, int total, bool isRunning, bool isCompleted, String? currentFileName
+ int processed, int total, bool isRunning, bool isCompleted, IndexingStatus status, String? currentFileName, String? errorMessage
 });
 
 
@@ -272,13 +276,15 @@ class __$IndexProgressCopyWithImpl<$Res>
 
 /// Create a copy of IndexProgress
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? processed = null,Object? total = null,Object? isRunning = null,Object? isCompleted = null,Object? currentFileName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? processed = null,Object? total = null,Object? isRunning = null,Object? isCompleted = null,Object? status = null,Object? currentFileName = freezed,Object? errorMessage = freezed,}) {
   return _then(_IndexProgress(
 processed: null == processed ? _self.processed : processed // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,isRunning: null == isRunning ? _self.isRunning : isRunning // ignore: cast_nullable_to_non_nullable
 as bool,isCompleted: null == isCompleted ? _self.isCompleted : isCompleted // ignore: cast_nullable_to_non_nullable
-as bool,currentFileName: freezed == currentFileName ? _self.currentFileName : currentFileName // ignore: cast_nullable_to_non_nullable
+as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as IndexingStatus,currentFileName: freezed == currentFileName ? _self.currentFileName : currentFileName // ignore: cast_nullable_to_non_nullable
+as String?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

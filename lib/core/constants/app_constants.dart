@@ -4,9 +4,7 @@ abstract final class AppConstants {
   static const String databaseName = 'pinpic';
   static const int databaseSchemaVersion = 1;
 
-  /// Temporary: always restart from splash → onboarding on launch.
-  /// Set to `false` when onboarding flow is finalized.
-  static const bool forceFirstLaunchFlow = true;
+  static const bool forceFirstLaunchFlow = false;
 
   static const Duration splashDuration = Duration(milliseconds: 1800);
   static const Duration searchDebounce = Duration(milliseconds: 280);

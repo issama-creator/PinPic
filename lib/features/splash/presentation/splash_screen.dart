@@ -19,6 +19,8 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _startupFailed = false;
+
   @override
   void initState() {
     super.initState();
@@ -26,42 +28,50 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _bootstrap() async {
-    await Future.wait([
-      ref.read(appBootstrapProvider.future),
-      Future<void>.delayed(AppConstants.splashDuration),
-    ]);
+    if (_startupFailed) {
+      setState(() => _startupFailed = false);
+      ref.invalidate(appBootstrapProvider);
+    }
+    try {
+      await Future.wait([
+        ref.read(appBootstrapProvider.future),
+        Future<void>.delayed(AppConstants.splashDuration),
+      ]);
 
-    if (!mounted) return;
-
-    final settingsRepo = ref.read(settingsRepositoryProvider);
-
-    if (AppConstants.forceFirstLaunchFlow) {
-      await settingsRepo.resetFirstLaunchFlow();
       if (!mounted) return;
-      context.go(RoutePaths.onboarding);
-      return;
+
+      final settingsRepo = ref.read(settingsRepositoryProvider);
+
+      if (AppConstants.forceFirstLaunchFlow) {
+        await settingsRepo.resetFirstLaunchFlow();
+        if (!mounted) return;
+        context.go(RoutePaths.onboarding);
+        return;
+      }
+
+      final settings = await settingsRepo.getSettings();
+
+      if (!mounted) return;
+
+      if (!settings.onboardingCompleted) {
+        context.go(RoutePaths.onboarding);
+        return;
+      }
+
+      if (!settings.permissionGranted) {
+        context.go(RoutePaths.permission);
+        return;
+      }
+
+      if (!settings.initialScanCompleted) {
+        context.go(RoutePaths.finished);
+        return;
+      }
+
+      context.go(RoutePaths.home);
+    } catch (_) {
+      if (mounted) setState(() => _startupFailed = true);
     }
-
-    final settings = await settingsRepo.getSettings();
-
-    if (!mounted) return;
-
-    if (!settings.onboardingCompleted) {
-      context.go(RoutePaths.onboarding);
-      return;
-    }
-
-    if (!settings.permissionGranted) {
-      context.go(RoutePaths.permission);
-      return;
-    }
-
-    if (!settings.initialScanCompleted) {
-      context.go(RoutePaths.finished);
-      return;
-    }
-
-    context.go(RoutePaths.home);
   }
 
   @override
@@ -102,12 +112,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       AppConstants.appTagline,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.textSecondary.withValues(
-                              alpha: 0.92,
-                            ),
-                            fontWeight: FontWeight.w400,
-                          ),
+                        color: AppColors.textSecondary.withValues(alpha: 0.92),
+                        fontWeight: FontWeight.w400,
+                      ),
                     ).animate().fadeIn(delay: 280.ms, duration: 450.ms),
+                    if (_startupFailed) ...[
+                      const SizedBox(height: 28),
+                      const Text(
+                        'Не удалось запустить PinPic',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      TextButton(
+                        onPressed: _bootstrap,
+                        child: const Text('Повторить'),
+                      ),
+                    ],
                   ],
                 ),
               ),

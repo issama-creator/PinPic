@@ -29,6 +29,9 @@ dependencies:
   google_mlkit_barcode_scanning: ^0.14.1
   google_mlkit_object_detection: ^0.15.0
   google_mlkit_image_labeling: ^0.14.1
+  google_mlkit_face_detection: ^0.13.2
+  tesseract_ocr: ^0.5.0
+  tflite_flutter: ^0.11.0
 
   flutter_animate: ^4.5.2
 
@@ -57,3 +60,7 @@ flutter:
     - images/bgcunb/onboarding_search.png
     - images/bgcunb/22.png
     - images/bgcunb/33.png
+    - assets/tessdata_config.json
+    - assets/tessdata/
+    - assets/models/mobilenet_v1.tflite
+    - assets/models/imagenet_labels.txt

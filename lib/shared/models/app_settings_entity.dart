@@ -24,15 +24,18 @@ class AppSettingsEntity {
 
   String localeCode = 'ru';
 
+  bool useLightTheme = false;
+
   AppSettingsEntity();
 
   AppSettingsEntity.initial()
-      : onboardingCompleted = false,
-        permissionRequested = false,
-        permissionGranted = false,
-        initialScanCompleted = false,
-        totalPhotosFound = 0,
-        totalIndexed = 0,
-        totalCategories = 0,
-        localeCode = 'ru';
+    : onboardingCompleted = false,
+      permissionRequested = false,
+      permissionGranted = false,
+      initialScanCompleted = false,
+      totalPhotosFound = 0,
+      totalIndexed = 0,
+      totalCategories = 0,
+      localeCode = 'ru',
+      useLightTheme = false;
 }

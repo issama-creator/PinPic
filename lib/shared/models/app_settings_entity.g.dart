@@ -62,6 +62,11 @@ const AppSettingsEntitySchema = CollectionSchema(
       name: r'totalPhotosFound',
       type: IsarType.long,
     ),
+    r'useLightTheme': PropertySchema(
+      id: 9,
+      name: r'useLightTheme',
+      type: IsarType.bool,
+    ),
   },
 
   estimateSize: _appSettingsEntityEstimateSize,
@@ -104,6 +109,7 @@ void _appSettingsEntitySerialize(
   writer.writeLong(offsets[6], object.totalCategories);
   writer.writeLong(offsets[7], object.totalIndexed);
   writer.writeLong(offsets[8], object.totalPhotosFound);
+  writer.writeBool(offsets[9], object.useLightTheme);
 }
 
 AppSettingsEntity _appSettingsEntityDeserialize(
@@ -123,6 +129,7 @@ AppSettingsEntity _appSettingsEntityDeserialize(
   object.totalCategories = reader.readLong(offsets[6]);
   object.totalIndexed = reader.readLong(offsets[7]);
   object.totalPhotosFound = reader.readLong(offsets[8]);
+  object.useLightTheme = reader.readBool(offsets[9]);
   return object;
 }
 
@@ -151,6 +158,8 @@ P _appSettingsEntityDeserializeProp<P>(
       return (reader.readLong(offset)) as P;
     case 8:
       return (reader.readLong(offset)) as P;
+    case 9:
+      return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -727,6 +736,15 @@ extension AppSettingsEntityQueryFilter
       );
     });
   }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterFilterCondition>
+  useLightThemeEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'useLightTheme', value: value),
+      );
+    });
+  }
 }
 
 extension AppSettingsEntityQueryObject
@@ -860,6 +878,20 @@ extension AppSettingsEntityQuerySortBy
   sortByTotalPhotosFoundDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'totalPhotosFound', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  sortByUseLightTheme() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'useLightTheme', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  sortByUseLightThemeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'useLightTheme', Sort.desc);
     });
   }
 }
@@ -1004,6 +1036,20 @@ extension AppSettingsEntityQuerySortThenBy
       return query.addSortBy(r'totalPhotosFound', Sort.desc);
     });
   }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  thenByUseLightTheme() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'useLightTheme', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  thenByUseLightThemeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'useLightTheme', Sort.desc);
+    });
+  }
 }
 
 extension AppSettingsEntityQueryWhereDistinct
@@ -1068,6 +1114,13 @@ extension AppSettingsEntityQueryWhereDistinct
   distinctByTotalPhotosFound() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'totalPhotosFound');
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QDistinct>
+  distinctByUseLightTheme() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'useLightTheme');
     });
   }
 }
@@ -1140,6 +1193,13 @@ extension AppSettingsEntityQueryProperty
   totalPhotosFoundProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'totalPhotosFound');
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, bool, QQueryOperations>
+  useLightThemeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'useLightTheme');
     });
   }
 }

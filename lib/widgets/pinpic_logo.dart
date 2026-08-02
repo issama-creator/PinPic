@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PinPicLogo extends StatelessWidget {
-  const PinPicLogo({
-    super.key,
-    this.size = 120,
-  });
+  const PinPicLogo({super.key, this.size = 120});
 
   final double size;
 

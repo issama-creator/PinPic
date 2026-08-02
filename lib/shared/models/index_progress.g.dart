@@ -12,7 +12,11 @@ _IndexProgress _$IndexProgressFromJson(Map<String, dynamic> json) =>
       total: (json['total'] as num?)?.toInt() ?? 0,
       isRunning: json['isRunning'] as bool? ?? false,
       isCompleted: json['isCompleted'] as bool? ?? false,
+      status:
+          $enumDecodeNullable(_$IndexingStatusEnumMap, json['status']) ??
+          IndexingStatus.idle,
       currentFileName: json['currentFileName'] as String?,
+      errorMessage: json['errorMessage'] as String?,
     );
 
 Map<String, dynamic> _$IndexProgressToJson(_IndexProgress instance) =>
@@ -21,5 +25,15 @@ Map<String, dynamic> _$IndexProgressToJson(_IndexProgress instance) =>
       'total': instance.total,
       'isRunning': instance.isRunning,
       'isCompleted': instance.isCompleted,
+      'status': _$IndexingStatusEnumMap[instance.status]!,
       'currentFileName': instance.currentFileName,
+      'errorMessage': instance.errorMessage,
     };
+
+const _$IndexingStatusEnumMap = {
+  IndexingStatus.idle: 'idle',
+  IndexingStatus.running: 'running',
+  IndexingStatus.paused: 'paused',
+  IndexingStatus.completed: 'completed',
+  IndexingStatus.failed: 'failed',
+};

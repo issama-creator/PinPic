@@ -13,9 +13,17 @@ class GradientBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(gradient: gradient),
-      child: child,
-    );
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    if (isLight) {
+      return DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: AppColors.lightBackgroundGradient,
+        ),
+        child: child,
+      );
+    }
+
+    // Dark theme: flat fill like Favorites / Home — no bright purple band.
+    return ColoredBox(color: AppColors.background, child: child);
   }
 }

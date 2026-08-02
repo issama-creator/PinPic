@@ -32,10 +32,7 @@ class PhotoMediaService {
       if (albums.isEmpty) return const [];
 
       final album = albums.first;
-      final assets = await album.getAssetListPaged(
-        page: page,
-        size: pageSize,
-      );
+      final assets = await album.getAssetListPaged(page: page, size: pageSize);
 
       final photos = <DevicePhoto>[];
       for (final asset in assets) {
@@ -71,19 +68,4 @@ class PhotoMediaService {
     }
   }
 
-  Future<List<AssetEntity>> fetchAssetPage({
-    int page = 0,
-    int pageSize = 100,
-  }) async {
-    final albums = await PhotoManager.getAssetPathList(
-      type: RequestType.image,
-      onlyAll: true,
-    );
-    if (albums.isEmpty) return const [];
-    return albums.first.getAssetListPaged(page: page, size: pageSize);
-  }
-
-  Future<AssetEntity?> findAssetById(String mediaId) {
-    return AssetEntity.fromId(mediaId);
-  }
 }

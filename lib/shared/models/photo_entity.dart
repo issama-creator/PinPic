@@ -16,6 +16,7 @@ class PhotoEntity {
 
   String? ocrText;
 
+  @Index(type: IndexType.value, caseSensitive: false)
   List<String> objects = [];
 
   @Index(caseSensitive: false)
@@ -44,8 +45,10 @@ class PhotoEntity {
 
   String? mimeType;
 
+  @Index()
   bool isFavorite = false;
 
+  @Index()
   bool hasQr = false;
 
   String? qrPayload;

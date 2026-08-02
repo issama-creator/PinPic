@@ -3,6 +3,8 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'index_progress.freezed.dart';
 part 'index_progress.g.dart';
 
+enum IndexingStatus { idle, running, paused, completed, failed }
+
 @freezed
 abstract class IndexProgress with _$IndexProgress {
   const factory IndexProgress({
@@ -10,7 +12,9 @@ abstract class IndexProgress with _$IndexProgress {
     @Default(0) int total,
     @Default(false) bool isRunning,
     @Default(false) bool isCompleted,
+    @Default(IndexingStatus.idle) IndexingStatus status,
     String? currentFileName,
+    String? errorMessage,
   }) = _IndexProgress;
 
   const IndexProgress._();

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:pinpic/core/providers/core_providers.dart';
 import 'package:pinpic/routes/route_paths.dart';
+import 'package:pinpic/shared/models/index_progress.dart';
 import 'package:pinpic/theme/app_colors.dart';
 import 'package:pinpic/widgets/glass_container.dart';
 import 'package:pinpic/widgets/gradient_background.dart';
@@ -17,6 +18,7 @@ class FinishedScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(appSettingsProvider);
+    final progress = ref.watch(indexProgressProvider);
     final formatter = NumberFormat.decimalPattern('ru');
 
     return GradientBackground(
@@ -27,30 +29,41 @@ class FinishedScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
             child: settingsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => Center(child: Text('$error')),
+              error: (_, __) => Center(
+                child: TextButton(
+                  onPressed: () => ref.invalidate(appSettingsProvider),
+                  child: const Text('Не удалось загрузить данные. Повторить'),
+                ),
+              ),
               data: (settings) {
+                final indexing = progress.isRunning;
+                final failed = progress.status == IndexingStatus.failed;
                 return Column(
                   children: [
                     const Spacer(),
                     Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppColors.brandGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.blue.withValues(alpha: 0.45),
-                            blurRadius: 28,
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: AppColors.brandGradient,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.blue.withValues(alpha: 0.45),
+                                blurRadius: 28,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        size: 64,
-                        color: Colors.white,
-                      ),
-                    )
+                          child: Icon(
+                            failed
+                                ? Icons.refresh_rounded
+                                : indexing
+                                ? Icons.manage_search_rounded
+                                : Icons.check_rounded,
+                            size: 64,
+                            color: Colors.white,
+                          ),
+                        )
                         .animate()
                         .scale(
                           begin: const Offset(0.8, 0.8),
@@ -61,7 +74,11 @@ class FinishedScreen extends ConsumerWidget {
                         .fadeIn(),
                     const SizedBox(height: 28),
                     Text(
-                      'Готово!',
+                      failed
+                          ? 'Индексация прервана'
+                          : indexing
+                          ? 'Индексируем фото'
+                          : 'Готово!',
                       style: Theme.of(context).textTheme.displaySmall,
                     ),
                     const SizedBox(height: 10),
@@ -72,7 +89,13 @@ class FinishedScreen extends ConsumerWidget {
                           ...PinPicMark.spans(
                             Theme.of(context).textTheme.bodyLarge,
                           ),
-                          const TextSpan(text: ' готов к работе 🚀'),
+                          TextSpan(
+                            text: indexing
+                                ? ' уже готов к работе'
+                                : failed
+                                ? ' продолжит с этого места'
+                                : ' готов к работе 🚀',
+                          ),
                         ],
                       ),
                     ),
@@ -90,7 +113,7 @@ class FinishedScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  '${formatter.format(settings.totalPhotosFound)} фото найдено',
+                                  '${formatter.format(progress.total > 0 ? progress.total : settings.totalPhotosFound)} фото найдено',
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context).textTheme.titleSmall,
                                 ),
@@ -121,13 +144,27 @@ class FinishedScreen extends ConsumerWidget {
                       ],
                     ),
                     const Spacer(),
+                    if (indexing) ...[
+                      LinearProgressIndicator(value: progress.fraction),
+                      const SizedBox(height: 10),
+                      Text(
+                        progress.label,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     GradientButton(
-                      label: 'Открыть поиск',
+                      label: failed ? 'Продолжить индексацию' : 'Открыть поиск',
                       onPressed: () async {
-                        await ref
-                            .read(settingsRepositoryProvider)
-                            .update((value) {
-                          value.initialScanCompleted = true;
+                        if (failed) {
+                          await ref
+                              .read(indexProgressProvider.notifier)
+                              .start();
+                          return;
+                        }
+                        await ref.read(settingsRepositoryProvider).update((
+                          value,
+                        ) {
                           value.onboardingCompleted = true;
                         });
                         ref.invalidate(appSettingsProvider);

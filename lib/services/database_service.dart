@@ -28,11 +28,7 @@ class DatabaseService {
     try {
       final directory = await getApplicationDocumentsDirectory();
       _isar = await Isar.open(
-        [
-          PhotoEntitySchema,
-          AppSettingsEntitySchema,
-          SearchHistoryEntitySchema,
-        ],
+        [PhotoEntitySchema, AppSettingsEntitySchema, SearchHistoryEntitySchema],
         directory: directory.path,
         name: AppConstants.databaseName,
       );

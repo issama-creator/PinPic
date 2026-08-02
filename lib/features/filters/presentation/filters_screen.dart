@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pinpic/services/category_engine.dart';
 import 'package:pinpic/widgets/app_scaffold.dart';
 import 'package:pinpic/widgets/gradient_button.dart';
 
@@ -13,6 +14,21 @@ class FiltersScreen extends StatefulWidget {
 class _FiltersScreenState extends State<FiltersScreen> {
   String? _category;
   bool _favoritesOnly = false;
+
+  static const _categories = [
+    CategoryEngine.documents,
+    CategoryEngine.receipts,
+    CategoryEngine.passwords,
+    CategoryEngine.tickets,
+    CategoryEngine.businessCards,
+    CategoryEngine.qr,
+    CategoryEngine.animals,
+    CategoryEngine.plants,
+    CategoryEngine.screenshots,
+    CategoryEngine.cars,
+    CategoryEngine.food,
+    CategoryEngine.people,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +45,7 @@ class _FiltersScreenState extends State<FiltersScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [
-                  'Документы',
-                  'Чеки',
-                  'Животные',
-                  'Путешествия',
-                  'Скриншоты',
-                ]
+                children: _categories
                     .map(
                       (item) => ChoiceChip(
                         label: Text(item),
@@ -57,7 +67,10 @@ class _FiltersScreenState extends State<FiltersScreen> {
               const Spacer(),
               GradientButton(
                 label: 'Применить',
-                onPressed: () => context.pop(),
+                onPressed: () => context.pop({
+                  'category': _category,
+                  'favoritesOnly': _favoritesOnly,
+                }),
               ),
             ],
           ),
