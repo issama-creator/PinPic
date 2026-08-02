@@ -9,8 +9,8 @@ class GradientButton extends StatelessWidget {
     required this.onPressed,
     this.enabled = true,
     this.height = 56,
-    this.glowBlur = 18,
-    this.glowOpacity = 0.35,
+    this.glowBlur = 11,
+    this.glowOpacity = 0.22,
   });
 
   final String label;

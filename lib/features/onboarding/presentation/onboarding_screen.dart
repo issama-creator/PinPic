@@ -104,8 +104,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         label: _page == _pageCount - 1 ? 'Начать' : 'Далее',
                         onPressed: _next,
                         height: 56,
-                        glowBlur: 11,
-                        glowOpacity: 0.22,
                       ),
                     ],
                   ),
@@ -127,38 +125,38 @@ class _SmartSearchPage extends StatelessWidget {
   // Asymmetric scatter around the phone — closer to center.
   static const _tags = [
     _TagData(
-      'Чеки IKEA',
-      Alignment(-0.68, -0.22),
+      'Паспорт',
+      Alignment(-0.61, -0.22),
       rotation: -0.06,
       scale: 0.94,
     ),
     _TagData(
-      'Паспорт',
-      Alignment(0.66, -0.28),
+      'Пароли Wi-Fi',
+      Alignment(0.59, -0.28),
       rotation: 0.05,
       scale: 0.98,
     ),
     _TagData(
-      'Пароли Wi-Fi',
-      Alignment(-0.72, 0.04),
+      'Билеты',
+      Alignment(-0.65, 0.04),
       rotation: 0.04,
       scale: 1.0,
     ),
     _TagData(
-      'Билеты',
-      Alignment(0.68, 0.08),
+      'QR-код',
+      Alignment(0.61, 0.08),
       rotation: -0.05,
       scale: 0.96,
     ),
     _TagData(
-      'Документы',
-      Alignment(-0.64, 0.36),
+      'Визитка',
+      Alignment(-0.58, 0.36),
       rotation: -0.03,
       scale: 0.97,
     ),
     _TagData(
-      'Путешествия',
-      Alignment(0.64, 0.42),
+      'Скриншот',
+      Alignment(0.58, 0.42),
       rotation: 0.06,
       scale: 1.0,
     ),
@@ -576,13 +574,13 @@ class _PrivacyPage extends StatelessWidget {
 class _PrivacyLogo extends StatelessWidget {
   const _PrivacyLogo();
 
-  static const double _logoSize = 128;
+  static const double _logoSize = 148;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 184,
-      height: 148,
+      width: 196,
+      height: 164,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -616,7 +614,7 @@ class _PrivacyLogo extends StatelessWidget {
             child: _BrandDot(size: 3),
           ),
           Image.asset(
-            'images/bgcunb/lup.png',
+            'images/bgcunb/33.png',
             width: _logoSize,
             height: _logoSize,
             fit: BoxFit.contain,

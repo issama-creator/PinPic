@@ -1,6 +1,6 @@
 abstract final class AppConstants {
   static const String appName = 'PinPic';
-  static const String appTagline = 'Интеллектуальный поиск в ваших фото';
+  static const String appTagline = 'Просто опишите — найдём в вашей галерее';
   static const String databaseName = 'pinpic';
   static const int databaseSchemaVersion = 1;
 

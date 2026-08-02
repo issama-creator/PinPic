@@ -98,11 +98,11 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
             ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                padding: const EdgeInsets.fromLTRB(28, 28, 28, 28),
                 child: Stack(
                   children: [
                     Align(
-                      alignment: const Alignment(0, -0.08),
+                      alignment: const Alignment(0, -0.12),
                       child: Text(
                         'Разрешите доступ\nк фото',
                         textAlign: TextAlign.center,
@@ -132,29 +132,68 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                           // Soft scrim so copy stays readable over photo tiles.
                           IgnorePointer(
                             child: Container(
-                              height: 280,
+                              height: 320,
                               decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    Color(0xCC050510),
+                                    Color(0xB3050510),
                                     Color(0xF2050510),
                                   ],
-                                  stops: [0.0, 0.45, 1.0],
+                                  stops: [0.0, 0.38, 1.0],
                                 ),
                               ),
                             ),
                           ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text.rich(
-                                TextSpan(
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    height: 1.45,
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text.rich(
+                                  TextSpan(
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      height: 1.45,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFFE4E0F0),
+                                      shadows: [
+                                        Shadow(
+                                          color: Color(0x99050510),
+                                          blurRadius: 10,
+                                        ),
+                                      ],
+                                    ),
+                                    children: [
+                                      const TextSpan(text: 'Чтобы '),
+                                      ...PinPicMark.spans(
+                                        const TextStyle(
+                                          fontSize: 17,
+                                          height: 1.45,
+                                          fontWeight: FontWeight.w400,
+                                          color: Color(0xFFE4E0F0),
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text:
+                                            ' мог искать, нужен доступ\nк вашей галерее.',
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ).animate().fadeIn(
+                                      delay: 180.ms,
+                                      duration: 700.ms,
+                                    ),
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'Данные остаются на устройстве.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    height: 1.4,
                                     fontWeight: FontWeight.w400,
                                     color: Color(0xFFE4E0F0),
                                     shadows: [
@@ -164,82 +203,44 @@ class _PermissionScreenState extends ConsumerState<PermissionScreen> {
                                       ),
                                     ],
                                   ),
-                                  children: [
-                                    const TextSpan(text: 'Чтобы '),
-                                    ...PinPicMark.spans(
-                                      const TextStyle(
-                                        fontSize: 15,
-                                        height: 1.45,
-                                        fontWeight: FontWeight.w400,
-                                        color: Color(0xFFE4E0F0),
-                                      ),
+                                ).animate().fadeIn(
+                                      delay: 200.ms,
+                                      duration: 700.ms,
                                     ),
-                                    const TextSpan(
-                                      text:
-                                          ' мог искать, нужен доступ\nк вашей галерее.',
+                                const SizedBox(height: 18),
+                                GradientButton(
+                                  label: _loading
+                                      ? 'Запрос доступа...'
+                                      : 'Разрешить доступ',
+                                  onPressed: _loading ? null : _requestAccess,
+                                  height: 56,
+                                ).animate().fadeIn(
+                                      delay: 260.ms,
+                                      duration: 700.ms,
                                     ),
-                                  ],
-                                ),
-                                textAlign: TextAlign.center,
-                              ).animate().fadeIn(
-                                    delay: 180.ms,
-                                    duration: 700.ms,
-                                  ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'Данные остаются на устройстве.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  height: 1.4,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFFE4E0F0),
-                                  shadows: [
-                                    Shadow(
-                                      color: Color(0x99050510),
-                                      blurRadius: 10,
+                                const SizedBox(height: 10),
+                                TextButton(
+                                  onPressed: _loading ? null : _later,
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
-                                  ],
-                                ),
-                              ).animate().fadeIn(
-                                    delay: 200.ms,
-                                    duration: 700.ms,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
-                              const SizedBox(height: 24),
-                              GradientButton(
-                                label: _loading
-                                    ? 'Запрос доступа...'
-                                    : 'Разрешить доступ',
-                                onPressed: _loading ? null : _requestAccess,
-                                height: 56,
-                                glowBlur: 11,
-                                glowOpacity: 0.22,
-                              ).animate().fadeIn(
-                                    delay: 260.ms,
-                                    duration: 700.ms,
-                                  ),
-                              const SizedBox(height: 6),
-                              TextButton(
-                                onPressed: _loading ? null : _later,
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: const Text(
-                                  'Позже',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFFD0CCD8),
+                                  child: const Text(
+                                    'Позже',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFFD0CCD8),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),

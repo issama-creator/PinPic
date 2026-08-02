@@ -54,16 +54,6 @@ flutter:
   uses-material-design: true
   assets:
     - images/logo.png
-    - images/image.png
     - images/bgcunb/onboarding_search.png
-    - images/bgcunb/onboarding_privacy.png
-    - images/bgcunb/privacy_lupa.png
-    - images/bgcunb/privacy_logo_lupa.png
-    - images/bgcunb/privacy_photos.png
-    - images/bgcunb/lup.png
-    - images/bgcunb/accessfon.png
-    - images/bgcunb/1.png
-    - images/bgcunb/2.png
-    - images/bgcunb/3.png
-    - images/bgcunb/4.png
     - images/bgcunb/22.png
+    - images/bgcunb/33.png

@@ -12,6 +12,7 @@ import 'package:pinpic/features/results/presentation/results_screen.dart';
 import 'package:pinpic/features/search/presentation/search_screen.dart';
 import 'package:pinpic/features/settings/presentation/settings_screen.dart';
 import 'package:pinpic/features/splash/presentation/splash_screen.dart';
+import 'package:pinpic/routes/app_page_transitions.dart';
 import 'package:pinpic/routes/route_paths.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -24,27 +25,42 @@ GoRouter createAppRouter() {
       GoRoute(
         path: RoutePaths.splash,
         name: 'splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => fadeSlidePage(
+          key: state.pageKey,
+          child: const SplashScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.onboarding,
         name: 'onboarding',
-        builder: (context, state) => const OnboardingScreen(),
+        pageBuilder: (context, state) => fadeSlidePage(
+          key: state.pageKey,
+          child: const OnboardingScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.permission,
         name: 'permission',
-        builder: (context, state) => const PermissionScreen(),
+        pageBuilder: (context, state) => fadeSlidePage(
+          key: state.pageKey,
+          child: const PermissionScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.finished,
         name: 'finished',
-        builder: (context, state) => const FinishedScreen(),
+        pageBuilder: (context, state) => fadeSlidePage(
+          key: state.pageKey,
+          child: const FinishedScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.home,
         name: 'home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => fadeSlidePage(
+          key: state.pageKey,
+          child: const HomeScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.search,
