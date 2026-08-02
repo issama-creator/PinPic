@@ -20,6 +20,10 @@ class AppSettingsEntity {
 
   int totalCategories = 0;
 
+  /// Version of the rules/models that produced the stored search index.
+  /// A mismatch triggers one safe migration scan on the next app start.
+  int indexedPipelineVersion = 0;
+
   DateTime? lastIndexedAt;
 
   String localeCode = 'ru';
@@ -36,6 +40,7 @@ class AppSettingsEntity {
       totalPhotosFound = 0,
       totalIndexed = 0,
       totalCategories = 0,
+      indexedPipelineVersion = 0,
       localeCode = 'ru',
       useLightTheme = false;
 }

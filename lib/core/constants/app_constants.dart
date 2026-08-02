@@ -7,7 +7,7 @@ abstract final class AppConstants {
   static const bool forceFirstLaunchFlow = false;
 
   static const Duration splashDuration = Duration(milliseconds: 1800);
-  static const Duration searchDebounce = Duration(milliseconds: 280);
+  static const Duration searchDebounce = Duration(milliseconds: 100);
   static const Duration animationFast = Duration(milliseconds: 200);
   static const Duration animationNormal = Duration(milliseconds: 320);
   static const Duration animationSlow = Duration(milliseconds: 500);

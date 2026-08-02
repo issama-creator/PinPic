@@ -3,6 +3,11 @@ class CategoryEngine {
   static const receipts = 'Чеки';
   static const passwords = 'Пароли';
   static const tickets = 'Билеты';
+  static const passports = 'Паспорта';
+  static const licenses = 'Права';
+  static const contracts = 'Договоры';
+  static const warranties = 'Гарантии';
+  static const prescriptions = 'Рецепты';
   static const businessCards = 'Визитки';
   static const qr = 'QR';
   static const animals = 'Животные';
@@ -20,6 +25,11 @@ class CategoryEngine {
     receipts,
     passwords,
     tickets,
+    passports,
+    licenses,
+    contracts,
+    warranties,
+    prescriptions,
     businessCards,
     qr,
     animals,
@@ -30,21 +40,107 @@ class CategoryEngine {
     people,
   ];
 
+  /// Document-first collections shown on the home screen with live counts.
+  static const memoryCollections = <String>[
+    documents,
+    passports,
+    licenses,
+    contracts,
+    receipts,
+    tickets,
+    warranties,
+    prescriptions,
+    businessCards,
+    passwords,
+    qr,
+  ];
+
+  /// Search-only umbrella. These remain distinct stored categories so a user
+  /// can still open «Чеки» or «Билеты», while a broad «документ» query brings
+  /// back every document-like photo.
+  static const documentFamily = <String>{
+    documents,
+    receipts,
+    passwords,
+    tickets,
+    passports,
+    licenses,
+    contracts,
+    warranties,
+    prescriptions,
+    businessCards,
+  };
+
+  static const _documentIntentTokens = {
+    'документ',
+    'документы',
+    'document',
+    'paperwork',
+    'certificate',
+    'бумага',
+    'справка',
+  };
+
   static final _tokenSplit = RegExp(r'[^a-zA-Zа-яА-ЯёЁ0-9]+');
 
   /// If expanded search tokens include a category name (or its lowercase
   /// form from synonym expansion), return that category label.
   static String? inferFromTokens(Iterable<String> tokens) {
+    final categories = inferCategoriesFromTokens(tokens);
+    return categories.isEmpty ? null : categories.first;
+  }
+
+  /// Singular / synonym forms that should open a specific collection.
+  static const _categoryAliases = <String, String>{
+    'паспорт': passports,
+    'загранпаспорт': passports,
+    'права': licenses,
+    'водительские': licenses,
+    'водительское': licenses,
+    'license': licenses,
+    'licence': licenses,
+    'договор': contracts,
+    'контракт': contracts,
+    'гарантия': warranties,
+    'гарантии': warranties,
+    'warranty': warranties,
+    'рецепт': prescriptions,
+    'рецепты': prescriptions,
+    'prescription': prescriptions,
+    'чек': receipts,
+    'чеки': receipts,
+    'receipt': receipts,
+    'билет': tickets,
+    'билеты': tickets,
+    'ticket': tickets,
+    'визитка': businessCards,
+    'визитки': businessCards,
+    'пароль': passwords,
+    'пароли': passwords,
+    'password': passwords,
+  };
+
+  /// Returns every indexed category a query is allowed to broaden into.
+  /// «Документ» is intentionally an umbrella; specific intents stay narrow.
+  static List<String> inferCategoriesFromTokens(Iterable<String> tokens) {
     final normalized = {
       for (final token in tokens)
         token.trim().toLowerCase().replaceAll('ё', 'е'),
     };
+    if (normalized.any(_documentIntentTokens.contains)) {
+      return documentFamily.toList(growable: false);
+    }
     for (final category in all) {
       final key = category.toLowerCase().replaceAll('ё', 'е');
-      if (normalized.contains(key)) return category;
+      if (normalized.contains(key)) return [category];
     }
-    return null;
+    for (final token in normalized) {
+      final alias = _categoryAliases[token];
+      if (alias != null) return [alias];
+    }
+    return const [];
   }
+
   /// Priority order matters: the most specific content signal always wins
   /// over a broader/technical one. A boarding pass or a receipt often also
   /// carries a QR code, but "Билеты"/"Чеки" is the more useful category than
@@ -62,33 +158,35 @@ class CategoryEngine {
     // Intentionally ignore [displayName]: Unsplash-style filenames
     // ("theangryteddy-keyboard-…", "vacation-trip") leak false category
     // signals. Filenames still feed [KeywordEngine] for search.
-    final blob = [
-      ocrText ?? '',
-      ...objects,
-    ].join(' ').toLowerCase();
+    final blob = [ocrText ?? '', ...objects].join(' ').toLowerCase();
     final tokens = blob
         .split(_tokenSplit)
         .where((token) => token.isNotEmpty)
         .toSet();
+    // OCR can contain arbitrary hallucinated words on textured images
+    // (for example, bead strings read as "tree"). Broad visual categories
+    // must therefore be based on the image models' labels/objects only.
+    final visualBlob = objects.join(' ').toLowerCase();
+    final visualTokens = visualBlob
+        .split(_tokenSplit)
+        .where((token) => token.isNotEmpty)
+        .toSet();
 
-    if (_matches(blob, tokens, const [
-      'password',
-      'пароль',
-      'логин',
-      'login',
-      'otp',
-      'pin',
-      'двухфакторн',
-    ], phrases: const [
-      'pin code',
-      'pin-код',
-      'verification code',
-      'confirm code',
-      'secret code',
-      'код подтверждения',
-      'одноразовый код',
-      'смс-код',
-    ])) {
+    if (_matches(
+      blob,
+      tokens,
+      const ['password', 'пароль', 'логин', 'login', 'otp', 'двухфакторн'],
+      phrases: const [
+        'pin code',
+        'pin-код',
+        'verification code',
+        'confirm code',
+        'secret code',
+        'код подтверждения',
+        'одноразовый код',
+        'смс-код',
+      ],
+    )) {
       return passwords;
     }
 
@@ -106,44 +204,87 @@ class CategoryEngine {
       return receipts;
     }
 
+    if (_matches(
+      blob,
+      tokens,
+      const [
+        'ticket',
+        'билет',
+        'boarding',
+        'посадочный',
+        'рейс',
+        'концерт',
+        'кинотеатр',
+      ],
+      phrases: const ['flight number', 'seat number', 'boarding pass'],
+    )) {
+      return tickets;
+    }
+
+    // A ticket can also have a generic Document label, but its explicit
+    // boarding/concert signal is more useful and must win.
+    if (_matches(
+      blob,
+      tokens,
+      const ['passport', 'паспорт', 'снилс'],
+      phrases: const ['russian federation'],
+    )) {
+      return passports;
+    }
+
+    if (_matches(
+      blob,
+      tokens,
+      const ['водительск', 'права', 'driver', 'license', 'удостоверен'],
+      phrases: const ['driver license', 'driving licence', 'водительское удостоверение'],
+    )) {
+      return licenses;
+    }
+
     if (_matches(blob, tokens, const [
-      'passport',
-      'паспорт',
+      'warranty',
+      'гарант',
+      'гарантий',
+    ])) {
+      return warranties;
+    }
+
+    if (_matches(blob, tokens, const [
+      'prescription',
+      'рецепт',
+      'аптек',
+      'pharmacy',
+      'лекарств',
+    ])) {
+      return prescriptions;
+    }
+
+    if (_matches(blob, tokens, const [
       'contract',
       'договор',
+      'соглашен',
+      'agreement',
+    ])) {
+      return contracts;
+    }
+
+    if (_matches(blob, tokens, const [
       'document',
       'документ',
-      'driver',
-      'license',
-      'удостоверен',
-      'снилс',
       'invoice',
+      'справка',
+      'certificate',
+      'инструкц',
     ])) {
       return documents;
     }
 
-    if (_matches(blob, tokens, const [
-      'ticket',
-      'билет',
-      'boarding',
-      'посадочный',
-      'рейс',
-      'концерт',
-      'кинотеатр',
-    ], phrases: const [
-      'flight number',
-      'seat number',
-      'boarding pass',
-    ])) {
-      return tickets;
-    }
-
-    if (_matches(blob, tokens, const [
-      'визитк',
-      'businesscard',
-    ], phrases: const [
-      'business card',
-    ])) {
+    if (_matches(
+      blob,
+      tokens,
+      const ['визитк', 'businesscard'],
+      phrases: const ['business card'],
+    )) {
       return businessCards;
     }
 
@@ -165,13 +306,11 @@ class CategoryEngine {
     // takes priority over the coarser object/label-based categories below.
     if (hasFace) return people;
 
-    if (_matches(blob, tokens, const [
+    if (_matches(visualBlob, visualTokens, const [
       'dog',
       'cat',
       'pet',
-      'animal',
       'bird',
-      'wildlife',
       'собак',
       'кошк',
       'животн',
@@ -182,7 +321,7 @@ class CategoryEngine {
       return animals;
     }
 
-    if (_matches(blob, tokens, const [
+    if (_matches(visualBlob, visualTokens, const [
       'plant',
       'flower',
       'tree',
@@ -195,7 +334,7 @@ class CategoryEngine {
       return plants;
     }
 
-    if (_matches(blob, tokens, const [
+    if (_matches(visualBlob, visualTokens, const [
       'car',
       'vehicle',
       'automobile',
@@ -207,7 +346,7 @@ class CategoryEngine {
       return cars;
     }
 
-    if (_matches(blob, tokens, const [
+    if (_matches(visualBlob, visualTokens, const [
       'food',
       'meal',
       'restaurant',
@@ -222,7 +361,7 @@ class CategoryEngine {
       return food;
     }
 
-    if (_matches(blob, tokens, const [
+    if (_matches(visualBlob, visualTokens, const [
       'person',
       'people',
       'human',

@@ -28,6 +28,38 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        ndk {
+            // PP-OCRv5 NCNN is validated for physical ARM64 and x86_64 emulator.
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+                arguments += listOf("-DANDROID_STL=c++_shared")
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
+    packaging {
+        jniLibs {
+            // Keep packaged NCNN/OpenCV static libs out of the APK as loose
+            // .so duplicates; only the built pinpic_ocr shared library ships.
+            excludes +=
+                setOf(
+                    "**/libncnn.a",
+                    "**/libopencv_core.a",
+                    "**/libopencv_imgproc.a",
+                )
+        }
     }
 
     buildTypes {

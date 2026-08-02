@@ -2,12 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pinpic/core/utils/hash_utils.dart';
 import 'package:pinpic/services/category_engine.dart';
 import 'package:pinpic/services/database_service.dart';
-import 'package:pinpic/services/face_service.dart';
 import 'package:pinpic/services/indexing_service.dart';
 import 'package:pinpic/services/ocr_service.dart';
 import 'package:pinpic/services/photo_media_service.dart';
 import 'package:pinpic/services/qr_service.dart';
-import 'package:pinpic/services/vision_service.dart';
 import 'package:pinpic/shared/models/app_settings_entity.dart';
 import 'package:pinpic/shared/models/device_photo.dart';
 import 'package:pinpic/shared/models/index_progress.dart';
@@ -82,6 +80,63 @@ void main() {
     expect(service.progress.errorMessage, contains('1'));
   });
 
+  test(
+    'runs deep OCR on screenshots when fast text is missing',
+    () async {
+      final ocr = _FakeOcr(fastResult: null, deepResult: 'Паспорт № 1234');
+      final photos = _FakePhotos();
+      final service = _service(
+        media: _FakeMedia([_device('deep', mimeType: 'image/png')]),
+        photos: photos,
+        ocr: ocr,
+      );
+      addTearDown(service.dispose);
+
+      await service.start();
+
+      expect(ocr.fastCalls, 1);
+      expect(ocr.deepCalls, 1);
+      expect(photos.items['deep']!.ocrText, contains('Паспорт'));
+      expect(service.progress.stage, IndexingStage.deep);
+    },
+  );
+
+  test('runs deep OCR for a digit-only ticket fast result', () async {
+    final ocr = _FakeOcr(
+      fastResult: '156 456 123456',
+      deepResult: 'БИЛЕТ НА КОНЦЕРТ',
+      appendPath: false,
+    );
+    final photos = _FakePhotos();
+    final service = _service(
+      media: _FakeMedia([_device('ticket')]),
+      photos: photos,
+      ocr: ocr,
+    );
+    addTearDown(service.dispose);
+
+    await service.start();
+
+    final ticket = photos.items['ticket']!;
+    expect(ocr.deepCalls, 1);
+    expect(ticket.category, CategoryEngine.tickets);
+    expect(ticket.keywords, containsAll(['билет', 'ticket']));
+  });
+
+  test('skips deep OCR for a textless non-document photo', () async {
+    final ocr = _FakeOcr(fastResult: null, deepResult: 'не должно читаться');
+    final service = _service(
+      media: _FakeMedia([_device('landscape')]),
+      photos: _FakePhotos(),
+      ocr: ocr,
+    );
+    addTearDown(service.dispose);
+
+    await service.start();
+
+    expect(ocr.deepCalls, 0);
+  });
+
   test('stop pauses without false 100 percent and resume completes', () async {
     final devices = List.generate(30, (index) => _device('photo-$index'));
     final photos = _FakePhotos();
@@ -118,13 +173,15 @@ IndexingService _service({
     settingsRepository: _FakeSettings(),
     ocrService: ocr ?? _FakeOcr(),
     qrService: _FakeQr(),
-    visionService: _FakeVision(),
-    faceService: _FakeFace(),
     categoryEngine: CategoryEngine(),
   );
 }
 
-DevicePhoto _device(String id, {int modifiedMinute = 1}) {
+DevicePhoto _device(
+  String id, {
+  int modifiedMinute = 1,
+  String mimeType = 'image/jpeg',
+}) {
   return DevicePhoto(
     mediaId: id,
     path: '/$id.jpg',
@@ -132,7 +189,7 @@ DevicePhoto _device(String id, {int modifiedMinute = 1}) {
     height: 200,
     sizeBytes: 1000,
     displayName: '$id.jpg',
-    mimeType: 'image/jpeg',
+    mimeType: mimeType,
     createDate: DateTime(2026, 1, 1),
     modifiedDate: DateTime(2026, 1, 1, 0, modifiedMinute),
   );
@@ -206,6 +263,9 @@ class _FakePhotos extends PhotoRepository {
   }
 
   @override
+  Future<PhotoEntity?> findByMediaId(String mediaId) async => items[mediaId];
+
+  @override
   Future<void> upsertAll(List<PhotoEntity> photos) async {
     for (final photo in photos) {
       items[photo.mediaId] = photo;
@@ -233,29 +293,58 @@ class _FakeSettings extends SettingsRepository {
     required int totalIndexed,
     required int totalCategories,
     bool initialScanCompleted = false,
+    int? indexedPipelineVersion,
   }) async {
     final settings = AppSettingsEntity.initial()
       ..totalPhotosFound = totalPhotosFound
       ..totalIndexed = totalIndexed
       ..totalCategories = totalCategories
-      ..initialScanCompleted = initialScanCompleted;
+      ..initialScanCompleted = initialScanCompleted
+      ..indexedPipelineVersion = indexedPipelineVersion ?? 0;
     return settings;
   }
 }
 
 class _FakeOcr extends OcrService {
-  _FakeOcr({this.corruptPath, this.delay = Duration.zero});
+  _FakeOcr({
+    this.corruptPath,
+    this.delay = Duration.zero,
+    this.fastResult = 'Документ',
+    this.deepResult,
+    this.appendPath = true,
+  });
 
   final String? corruptPath;
   final Duration delay;
-  int calls = 0;
+  final String? fastResult;
+  final String? deepResult;
+  final bool appendPath;
+  int fastCalls = 0;
+  int deepCalls = 0;
+  int get calls => fastCalls;
 
   @override
-  Future<String?> extractText(String path) async {
-    calls++;
+  Future<String?> extractFastText(String path) async {
+    fastCalls++;
     if (delay > Duration.zero) await Future<void>.delayed(delay);
     if (path == corruptPath) throw StateError('damaged');
-    return 'Документ $path';
+    if (fastResult == null) return null;
+    return appendPath ? '$fastResult $path' : fastResult;
+  }
+
+  @override
+  Future<String?> extractDeepText(
+    String path, {
+    bool aggressive = true,
+  }) async {
+    deepCalls++;
+    return deepResult;
+  }
+
+  @override
+  bool needsDeepText(String? fastText) {
+    final text = fastText?.trim() ?? '';
+    return text.isEmpty || RegExp(r'[a-zA-Z]').allMatches(text).length < 8;
   }
 
   @override
@@ -267,24 +356,6 @@ class _FakeQr extends QrService {
   Future<QrScanResult> scan(String path) async {
     return const QrScanResult(hasQr: false);
   }
-
-  @override
-  Future<void> dispose() async {}
-}
-
-class _FakeVision extends VisionService {
-  @override
-  Future<List<String>> detectLabelsAndObjects(String path) async {
-    return const ['Document'];
-  }
-
-  @override
-  Future<void> dispose() async {}
-}
-
-class _FakeFace extends FaceService {
-  @override
-  Future<bool> hasFace(String path) async => false;
 
   @override
   Future<void> dispose() async {}

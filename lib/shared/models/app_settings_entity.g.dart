@@ -17,53 +17,58 @@ const AppSettingsEntitySchema = CollectionSchema(
   name: r'AppSettingsEntity',
   id: 5506238605616873742,
   properties: {
-    r'initialScanCompleted': PropertySchema(
+    r'indexedPipelineVersion': PropertySchema(
       id: 0,
+      name: r'indexedPipelineVersion',
+      type: IsarType.long,
+    ),
+    r'initialScanCompleted': PropertySchema(
+      id: 1,
       name: r'initialScanCompleted',
       type: IsarType.bool,
     ),
     r'lastIndexedAt': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'lastIndexedAt',
       type: IsarType.dateTime,
     ),
     r'localeCode': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'localeCode',
       type: IsarType.string,
     ),
     r'onboardingCompleted': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'onboardingCompleted',
       type: IsarType.bool,
     ),
     r'permissionGranted': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'permissionGranted',
       type: IsarType.bool,
     ),
     r'permissionRequested': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'permissionRequested',
       type: IsarType.bool,
     ),
     r'totalCategories': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'totalCategories',
       type: IsarType.long,
     ),
     r'totalIndexed': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'totalIndexed',
       type: IsarType.long,
     ),
     r'totalPhotosFound': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'totalPhotosFound',
       type: IsarType.long,
     ),
     r'useLightTheme': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'useLightTheme',
       type: IsarType.bool,
     ),
@@ -100,16 +105,17 @@ void _appSettingsEntitySerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeBool(offsets[0], object.initialScanCompleted);
-  writer.writeDateTime(offsets[1], object.lastIndexedAt);
-  writer.writeString(offsets[2], object.localeCode);
-  writer.writeBool(offsets[3], object.onboardingCompleted);
-  writer.writeBool(offsets[4], object.permissionGranted);
-  writer.writeBool(offsets[5], object.permissionRequested);
-  writer.writeLong(offsets[6], object.totalCategories);
-  writer.writeLong(offsets[7], object.totalIndexed);
-  writer.writeLong(offsets[8], object.totalPhotosFound);
-  writer.writeBool(offsets[9], object.useLightTheme);
+  writer.writeLong(offsets[0], object.indexedPipelineVersion);
+  writer.writeBool(offsets[1], object.initialScanCompleted);
+  writer.writeDateTime(offsets[2], object.lastIndexedAt);
+  writer.writeString(offsets[3], object.localeCode);
+  writer.writeBool(offsets[4], object.onboardingCompleted);
+  writer.writeBool(offsets[5], object.permissionGranted);
+  writer.writeBool(offsets[6], object.permissionRequested);
+  writer.writeLong(offsets[7], object.totalCategories);
+  writer.writeLong(offsets[8], object.totalIndexed);
+  writer.writeLong(offsets[9], object.totalPhotosFound);
+  writer.writeBool(offsets[10], object.useLightTheme);
 }
 
 AppSettingsEntity _appSettingsEntityDeserialize(
@@ -120,16 +126,17 @@ AppSettingsEntity _appSettingsEntityDeserialize(
 ) {
   final object = AppSettingsEntity();
   object.id = id;
-  object.initialScanCompleted = reader.readBool(offsets[0]);
-  object.lastIndexedAt = reader.readDateTimeOrNull(offsets[1]);
-  object.localeCode = reader.readString(offsets[2]);
-  object.onboardingCompleted = reader.readBool(offsets[3]);
-  object.permissionGranted = reader.readBool(offsets[4]);
-  object.permissionRequested = reader.readBool(offsets[5]);
-  object.totalCategories = reader.readLong(offsets[6]);
-  object.totalIndexed = reader.readLong(offsets[7]);
-  object.totalPhotosFound = reader.readLong(offsets[8]);
-  object.useLightTheme = reader.readBool(offsets[9]);
+  object.indexedPipelineVersion = reader.readLong(offsets[0]);
+  object.initialScanCompleted = reader.readBool(offsets[1]);
+  object.lastIndexedAt = reader.readDateTimeOrNull(offsets[2]);
+  object.localeCode = reader.readString(offsets[3]);
+  object.onboardingCompleted = reader.readBool(offsets[4]);
+  object.permissionGranted = reader.readBool(offsets[5]);
+  object.permissionRequested = reader.readBool(offsets[6]);
+  object.totalCategories = reader.readLong(offsets[7]);
+  object.totalIndexed = reader.readLong(offsets[8]);
+  object.totalPhotosFound = reader.readLong(offsets[9]);
+  object.useLightTheme = reader.readBool(offsets[10]);
   return object;
 }
 
@@ -141,24 +148,26 @@ P _appSettingsEntityDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 1:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 2:
-      return (reader.readString(offset)) as P;
-    case 3:
       return (reader.readBool(offset)) as P;
+    case 2:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
       return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readLong(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 7:
       return (reader.readLong(offset)) as P;
     case 8:
       return (reader.readLong(offset)) as P;
     case 9:
+      return (reader.readLong(offset)) as P;
+    case 10:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -310,6 +319,64 @@ extension AppSettingsEntityQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterFilterCondition>
+  indexedPipelineVersionEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'indexedPipelineVersion',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterFilterCondition>
+  indexedPipelineVersionGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'indexedPipelineVersion',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterFilterCondition>
+  indexedPipelineVersionLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'indexedPipelineVersion',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterFilterCondition>
+  indexedPipelineVersionBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'indexedPipelineVersion',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -756,6 +823,20 @@ extension AppSettingsEntityQueryLinks
 extension AppSettingsEntityQuerySortBy
     on QueryBuilder<AppSettingsEntity, AppSettingsEntity, QSortBy> {
   QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  sortByIndexedPipelineVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'indexedPipelineVersion', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  sortByIndexedPipelineVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'indexedPipelineVersion', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
   sortByInitialScanCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'initialScanCompleted', Sort.asc);
@@ -912,6 +993,20 @@ extension AppSettingsEntityQuerySortThenBy
   }
 
   QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  thenByIndexedPipelineVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'indexedPipelineVersion', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
+  thenByIndexedPipelineVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'indexedPipelineVersion', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QAfterSortBy>
   thenByInitialScanCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'initialScanCompleted', Sort.asc);
@@ -1055,6 +1150,13 @@ extension AppSettingsEntityQuerySortThenBy
 extension AppSettingsEntityQueryWhereDistinct
     on QueryBuilder<AppSettingsEntity, AppSettingsEntity, QDistinct> {
   QueryBuilder<AppSettingsEntity, AppSettingsEntity, QDistinct>
+  distinctByIndexedPipelineVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'indexedPipelineVersion');
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, AppSettingsEntity, QDistinct>
   distinctByInitialScanCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'initialScanCompleted');
@@ -1130,6 +1232,13 @@ extension AppSettingsEntityQueryProperty
   QueryBuilder<AppSettingsEntity, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSettingsEntity, int, QQueryOperations>
+  indexedPipelineVersionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'indexedPipelineVersion');
     });
   }
 

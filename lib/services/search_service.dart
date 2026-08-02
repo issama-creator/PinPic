@@ -1,8 +1,10 @@
 import 'package:pinpic/core/constants/app_constants.dart';
 import 'package:pinpic/services/category_engine.dart';
 import 'package:pinpic/services/fuzzy_matcher.dart';
+import 'package:pinpic/services/memory_query_parser.dart';
 import 'package:pinpic/services/ranking_engine.dart';
 import 'package:pinpic/services/synonym_engine.dart';
+import 'package:pinpic/services/vector_search_service.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
 import 'package:pinpic/shared/repositories/photo_repository.dart';
 import 'package:pinpic/shared/repositories/search_history_repository.dart';
@@ -13,6 +15,7 @@ class SearchHit {
     required this.score,
     required this.reason,
     required this.confidence,
+    this.evidence = const [],
     this.isSimilar = false,
   });
 
@@ -20,6 +23,7 @@ class SearchHit {
   final double score;
   final String reason;
   final int confidence;
+  final List<String> evidence;
   final bool isSimilar;
 }
 
@@ -56,17 +60,27 @@ class SearchService {
     SynonymEngine? synonymEngine,
     FuzzyMatcher? fuzzyMatcher,
     RankingEngine? rankingEngine,
+    VectorSearchService? vectorSearchService,
+    MemoryQueryParser? queryParser,
   }) : _photos = photoRepository,
        _history = historyRepository,
        _synonyms = synonymEngine ?? SynonymEngine(),
        _fuzzy = fuzzyMatcher ?? FuzzyMatcher(),
-       _ranking = rankingEngine ?? RankingEngine();
+       _ranking = rankingEngine ?? RankingEngine(),
+       _vectors =
+           vectorSearchService ??
+           VectorSearchService(photoRepository: photoRepository),
+       _parser =
+           queryParser ??
+           MemoryQueryParser(synonymEngine: synonymEngine ?? SynonymEngine());
 
   final PhotoRepository _photos;
   final SearchHistoryRepository _history;
   final SynonymEngine _synonyms;
   final FuzzyMatcher _fuzzy;
   final RankingEngine _ranking;
+  final MemoryQueryParser _parser;
+  final VectorSearchService _vectors;
   final Map<String, _CacheEntry<List<SearchHit>>> _resultCache = {};
   final Map<String, _CacheEntry<List<String>>> _suggestionCache = {};
   _CacheEntry<Set<String>>? _vocabularyCache;
@@ -104,12 +118,13 @@ class SearchService {
       );
     }
 
-    final normalizedQuery = _synonyms.normalize(query);
-    final cacheKey = '$normalizedQuery|${category ?? ''}|$favoritesOnly';
+    final memoryQuery = _parser.parse(query);
+    final cacheKey =
+        '${memoryQuery.cleaned}|${category ?? ''}|$favoritesOnly';
     var cached = _resultCache[cacheKey];
     if (cached == null || !cached.isFresh) {
       final ranked = await _buildRankedResults(
-        normalizedQuery,
+        memoryQuery,
         category: category,
         favoritesOnly: favoritesOnly,
       );
@@ -132,7 +147,10 @@ class SearchService {
   }
 
   Future<List<String>> suggestions(String rawPrefix) async {
-    final prefix = _synonyms.normalize(rawPrefix);
+    final memory = _parser.parse(rawPrefix);
+    final prefix = memory.cleaned.isNotEmpty
+        ? memory.cleaned
+        : _synonyms.normalize(rawPrefix);
     if (prefix.isEmpty) {
       final recent = await _history.getRecent(limit: 6);
       return recent.map((e) => e.query).toList(growable: false);
@@ -149,7 +167,9 @@ class SearchService {
     final merged = <String>{};
 
     for (final item in recent) {
-      if (item.query.toLowerCase().startsWith(prefix)) {
+      final recentClean = _parser.parse(item.query).cleaned;
+      if (item.query.toLowerCase().startsWith(prefix) ||
+          recentClean.startsWith(prefix)) {
         merged.add(item.query);
       }
     }
@@ -157,7 +177,7 @@ class SearchService {
       merged.add(keyword);
     }
 
-    if (merged.length < AppConstants.suggestionsLimit && prefix.length >= 4) {
+    if (merged.length < AppConstants.suggestionsLimit && prefix.length >= 3) {
       final vocabulary = await _vocabulary();
       for (final keyword in vocabulary) {
         if (_fuzzy.isMatch(prefix, keyword)) merged.add(keyword);
@@ -183,75 +203,112 @@ class SearchService {
   }
 
   Future<List<SearchHit>> _buildRankedResults(
-    String normalizedQuery, {
+    MemoryQuery memoryQuery, {
     String? category,
     required bool favoritesOnly,
   }) async {
-    final originalTokens = _tokenize(normalizedQuery);
-    final expandedTokens = _synonyms.expand(originalTokens);
-    // "билет" expands to include "билеты" → infer «Билеты» so category-tagged
-    // photos still match even when OCR never stored the word itself.
-    final inferredCategory =
-        category ?? CategoryEngine.inferFromTokens(expandedTokens);
+    final originalTokens = memoryQuery.meaningfulTokens;
+    final expandedTokens = {
+      ..._synonyms.expand(originalTokens),
+      ...memoryQuery.digitTokens,
+    };
+    final inferredCategories = category == null
+        ? CategoryEngine.inferCategoriesFromTokens(expandedTokens)
+        : [category];
+    final semanticFuture = originalTokens.isEmpty
+        ? Future.value(const <SemanticCandidate>[])
+        : _vectors.search(originalTokens);
 
     var candidates = await _photos.searchCandidatesForTokens(
       tokens: expandedTokens,
       category: category,
       favoritesOnly: favoritesOnly,
     );
-    var similarFallback = false;
+    final fuzzyCandidateIds = <String>{};
+    final semanticScores = <String, double>{};
 
-    if (category == null && inferredCategory != null) {
-      final byCategory = await _photos.searchCandidatesForTokens(
-        tokens: const {},
-        category: inferredCategory,
-        favoritesOnly: favoritesOnly,
-      );
-      if (byCategory.isNotEmpty) {
-        final merged = <String, PhotoEntity>{
-          for (final photo in candidates) photo.mediaId: photo,
-          for (final photo in byCategory) photo.mediaId: photo,
-        };
-        candidates = merged.values.toList(growable: false);
+    if (category == null && inferredCategories.isNotEmpty) {
+      final merged = <String, PhotoEntity>{
+        for (final photo in candidates) photo.mediaId: photo,
+      };
+      for (final inferredCategory in inferredCategories) {
+        final byCategory = await _photos.searchCandidatesForTokens(
+          tokens: const {},
+          category: inferredCategory,
+          favoritesOnly: favoritesOnly,
+        );
+        for (final photo in byCategory) {
+          merged[photo.mediaId] = photo;
+        }
       }
+      candidates = merged.values.toList(growable: false);
     }
 
-    if (candidates.isEmpty && originalTokens.isNotEmpty) {
+    // Fuzzy recall when empty or thin — user typed from imperfect memory.
+    final needsFuzzy =
+        originalTokens.isNotEmpty &&
+        (candidates.isEmpty || candidates.length < 8);
+    if (needsFuzzy) {
       final vocabulary = await _vocabulary();
       final fuzzyTokens = <String>{};
       for (final token in originalTokens) {
+        if (token.length < 3) continue;
         for (final keyword in vocabulary) {
           if (_fuzzy.isMatch(token, keyword)) fuzzyTokens.add(keyword);
-          if (fuzzyTokens.length >= 20) break;
+          if (fuzzyTokens.length >= 40) break;
         }
+        if (fuzzyTokens.length >= 40) break;
       }
       if (fuzzyTokens.isNotEmpty) {
-        candidates = await _photos.searchCandidatesForTokens(
+        final fuzzyHits = await _photos.searchCandidatesForTokens(
           tokens: fuzzyTokens,
           category: category,
           favoritesOnly: favoritesOnly,
         );
+        final merged = <String, PhotoEntity>{
+          for (final photo in candidates) photo.mediaId: photo,
+        };
+        for (final photo in fuzzyHits) {
+          if (!merged.containsKey(photo.mediaId)) {
+            fuzzyCandidateIds.add(photo.mediaId);
+          }
+          merged[photo.mediaId] = photo;
+        }
+        candidates = merged.values.toList(growable: false);
         expandedTokens.addAll(fuzzyTokens);
-        similarFallback = candidates.isNotEmpty;
       }
     }
 
-    // Intentionally no "dump the whole gallery as similar" fallback.
-    // Returning empty is better than a plant + lion labeled 35% for «билет».
+    if (originalTokens.isNotEmpty && candidates.isEmpty) {
+      final semantic = await semanticFuture;
+      final merged = <String, PhotoEntity>{};
+      for (final candidate in semantic) {
+        final photo = candidate.photo;
+        if (favoritesOnly && !photo.isFavorite) continue;
+        if (category != null && photo.category != category) continue;
+        semanticScores[photo.mediaId] = candidate.similarity;
+        merged[photo.mediaId] = photo;
+      }
+      candidates = merged.values.toList(growable: false);
+    }
 
     final hits = <SearchHit>[];
+    final rankingQuery = memoryQuery.cleaned.isNotEmpty
+        ? memoryQuery.cleaned
+        : memoryQuery.raw.toLowerCase().replaceAll('ё', 'е');
     for (final photo in candidates) {
       final rank = _ranking.rank(
         photo: photo,
-        normalizedQuery: normalizedQuery,
+        normalizedQuery: rankingQuery,
         originalTokens: originalTokens,
         expandedTokens: expandedTokens,
-        similarFallback: similarFallback,
-        categoryFilter: inferredCategory,
+        similarFallback: fuzzyCandidateIds.contains(photo.mediaId),
+        categoryFilter: inferredCategories.contains(photo.category)
+            ? photo.category
+            : null,
+        semanticSimilarity: semanticScores[photo.mediaId] ?? 0,
       );
-      // Drop noise that only got a similar-fallback participation trophy.
-      if (similarFallback && rank.score < 30) continue;
-      if (rank.score <= 0 && !similarFallback && originalTokens.isNotEmpty) {
+      if (rank.score <= 0 && originalTokens.isNotEmpty) {
         continue;
       }
       hits.add(
@@ -260,7 +317,8 @@ class SearchService {
           score: rank.score,
           confidence: rank.confidence,
           reason: rank.reason,
-          isSimilar: similarFallback,
+          evidence: rank.evidence,
+          isSimilar: rank.isSimilar,
         ),
       );
     }
@@ -278,16 +336,14 @@ class SearchService {
     final cached = _vocabularyCache;
     if (cached != null && cached.isFresh) return cached.value;
     final vocabulary = await _photos.keywordVocabulary();
-    _vocabularyCache = _CacheEntry(vocabulary, DateTime.now());
-    return vocabulary;
-  }
-
-  Set<String> _tokenize(String query) {
-    return query
-        .toLowerCase()
-        .split(RegExp(r'[^a-zA-Zа-яА-ЯёЁ0-9]+'))
-        .map((e) => e.trim())
-        .where((e) => e.length >= 2)
-        .toSet();
+    final entityPool = await _photos.semanticCandidatePool(limit: 800);
+    final enriched = {
+      ...vocabulary,
+      for (final photo in entityPool)
+        for (final token in photo.entityTokens)
+          if (token.trim().length >= 3) token.toLowerCase(),
+    };
+    _vocabularyCache = _CacheEntry(enriched, DateTime.now());
+    return enriched;
   }
 }

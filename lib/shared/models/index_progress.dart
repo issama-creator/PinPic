@@ -5,6 +5,8 @@ part 'index_progress.g.dart';
 
 enum IndexingStatus { idle, running, paused, completed, failed }
 
+enum IndexingStage { fast, deep }
+
 @freezed
 abstract class IndexProgress with _$IndexProgress {
   const factory IndexProgress({
@@ -13,6 +15,7 @@ abstract class IndexProgress with _$IndexProgress {
     @Default(false) bool isRunning,
     @Default(false) bool isCompleted,
     @Default(IndexingStatus.idle) IndexingStatus status,
+    @Default(IndexingStage.fast) IndexingStage stage,
     String? currentFileName,
     String? errorMessage,
   }) = _IndexProgress;

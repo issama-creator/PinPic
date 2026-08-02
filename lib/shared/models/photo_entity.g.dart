@@ -18,78 +18,110 @@ const PhotoEntitySchema = CollectionSchema(
   id: 8245672414119462092,
   properties: {
     r'album': PropertySchema(id: 0, name: r'album', type: IsarType.string),
-    r'category': PropertySchema(
+    r'cardBody': PropertySchema(
       id: 1,
+      name: r'cardBody',
+      type: IsarType.string,
+    ),
+    r'cardTitle': PropertySchema(
+      id: 2,
+      name: r'cardTitle',
+      type: IsarType.string,
+    ),
+    r'category': PropertySchema(
+      id: 3,
       name: r'category',
       type: IsarType.string,
     ),
     r'dateTaken': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'dateTaken',
       type: IsarType.dateTime,
     ),
     r'displayName': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'displayName',
       type: IsarType.string,
     ),
-    r'hasQr': PropertySchema(id: 4, name: r'hasQr', type: IsarType.bool),
-    r'hash': PropertySchema(id: 5, name: r'hash', type: IsarType.string),
-    r'height': PropertySchema(id: 6, name: r'height', type: IsarType.long),
+    r'entityTokens': PropertySchema(
+      id: 6,
+      name: r'entityTokens',
+      type: IsarType.stringList,
+    ),
+    r'hasFace': PropertySchema(id: 7, name: r'hasFace', type: IsarType.bool),
+    r'hasQr': PropertySchema(id: 8, name: r'hasQr', type: IsarType.bool),
+    r'hash': PropertySchema(id: 9, name: r'hash', type: IsarType.string),
+    r'height': PropertySchema(id: 10, name: r'height', type: IsarType.long),
     r'indexedAt': PropertySchema(
-      id: 7,
+      id: 11,
       name: r'indexedAt',
       type: IsarType.dateTime,
     ),
     r'isFavorite': PropertySchema(
-      id: 8,
+      id: 12,
       name: r'isFavorite',
       type: IsarType.bool,
     ),
     r'keywords': PropertySchema(
-      id: 9,
+      id: 13,
       name: r'keywords',
       type: IsarType.stringList,
     ),
     r'latitude': PropertySchema(
-      id: 10,
+      id: 14,
       name: r'latitude',
       type: IsarType.double,
     ),
     r'longitude': PropertySchema(
-      id: 11,
+      id: 15,
       name: r'longitude',
       type: IsarType.double,
     ),
-    r'mediaId': PropertySchema(id: 12, name: r'mediaId', type: IsarType.string),
+    r'mediaId': PropertySchema(id: 16, name: r'mediaId', type: IsarType.string),
     r'mimeType': PropertySchema(
-      id: 13,
+      id: 17,
       name: r'mimeType',
       type: IsarType.string,
     ),
     r'modifiedAt': PropertySchema(
-      id: 14,
+      id: 18,
       name: r'modifiedAt',
       type: IsarType.dateTime,
     ),
     r'objects': PropertySchema(
-      id: 15,
+      id: 19,
       name: r'objects',
       type: IsarType.stringList,
     ),
-    r'ocrText': PropertySchema(id: 16, name: r'ocrText', type: IsarType.string),
-    r'path': PropertySchema(id: 17, name: r'path', type: IsarType.string),
+    r'ocrKeywords': PropertySchema(
+      id: 20,
+      name: r'ocrKeywords',
+      type: IsarType.stringList,
+    ),
+    r'ocrText': PropertySchema(id: 21, name: r'ocrText', type: IsarType.string),
+    r'path': PropertySchema(id: 22, name: r'path', type: IsarType.string),
     r'qrPayload': PropertySchema(
-      id: 18,
+      id: 23,
       name: r'qrPayload',
       type: IsarType.string,
     ),
+    r'semanticEmbedding': PropertySchema(
+      id: 24,
+      name: r'semanticEmbedding',
+      type: IsarType.doubleList,
+    ),
     r'sizeBytes': PropertySchema(
-      id: 19,
+      id: 25,
       name: r'sizeBytes',
       type: IsarType.long,
     ),
-    r'width': PropertySchema(id: 20, name: r'width', type: IsarType.long),
+    r'summary': PropertySchema(id: 26, name: r'summary', type: IsarType.string),
+    r'visionKeywords': PropertySchema(
+      id: 27,
+      name: r'visionKeywords',
+      type: IsarType.stringList,
+    ),
+    r'width': PropertySchema(id: 28, name: r'width', type: IsarType.long),
   },
 
   estimateSize: _photoEntityEstimateSize,
@@ -124,6 +156,32 @@ const PhotoEntitySchema = CollectionSchema(
         ),
       ],
     ),
+    r'entityTokens': IndexSchema(
+      id: -5318890006452615364,
+      name: r'entityTokens',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'entityTokens',
+          type: IndexType.value,
+          caseSensitive: false,
+        ),
+      ],
+    ),
+    r'ocrKeywords': IndexSchema(
+      id: 2405297807147412282,
+      name: r'ocrKeywords',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'ocrKeywords',
+          type: IndexType.value,
+          caseSensitive: false,
+        ),
+      ],
+    ),
     r'objects': IndexSchema(
       id: -3299248853131431977,
       name: r'objects',
@@ -132,6 +190,19 @@ const PhotoEntitySchema = CollectionSchema(
       properties: [
         IndexPropertySchema(
           name: r'objects',
+          type: IndexType.value,
+          caseSensitive: false,
+        ),
+      ],
+    ),
+    r'visionKeywords': IndexSchema(
+      id: -2160034419788734854,
+      name: r'visionKeywords',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'visionKeywords',
           type: IndexType.value,
           caseSensitive: false,
         ),
@@ -215,6 +286,19 @@ const PhotoEntitySchema = CollectionSchema(
         ),
       ],
     ),
+    r'hasFace': IndexSchema(
+      id: -4320032872621253416,
+      name: r'hasFace',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'hasFace',
+          type: IndexType.value,
+          caseSensitive: false,
+        ),
+      ],
+    ),
   },
   links: {},
   embeddedSchemas: {},
@@ -238,6 +322,18 @@ int _photoEntityEstimateSize(
     }
   }
   {
+    final value = object.cardBody;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.cardTitle;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.category;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -247,6 +343,13 @@ int _photoEntityEstimateSize(
     final value = object.displayName;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.entityTokens.length * 3;
+  {
+    for (var i = 0; i < object.entityTokens.length; i++) {
+      final value = object.entityTokens[i];
+      bytesCount += value.length * 3;
     }
   }
   bytesCount += 3 + object.hash.length * 3;
@@ -271,6 +374,13 @@ int _photoEntityEstimateSize(
       bytesCount += value.length * 3;
     }
   }
+  bytesCount += 3 + object.ocrKeywords.length * 3;
+  {
+    for (var i = 0; i < object.ocrKeywords.length; i++) {
+      final value = object.ocrKeywords[i];
+      bytesCount += value.length * 3;
+    }
+  }
   {
     final value = object.ocrText;
     if (value != null) {
@@ -284,6 +394,20 @@ int _photoEntityEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.semanticEmbedding.length * 8;
+  {
+    final value = object.summary;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.visionKeywords.length * 3;
+  {
+    for (var i = 0; i < object.visionKeywords.length; i++) {
+      final value = object.visionKeywords[i];
+      bytesCount += value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -294,26 +418,34 @@ void _photoEntitySerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeString(offsets[0], object.album);
-  writer.writeString(offsets[1], object.category);
-  writer.writeDateTime(offsets[2], object.dateTaken);
-  writer.writeString(offsets[3], object.displayName);
-  writer.writeBool(offsets[4], object.hasQr);
-  writer.writeString(offsets[5], object.hash);
-  writer.writeLong(offsets[6], object.height);
-  writer.writeDateTime(offsets[7], object.indexedAt);
-  writer.writeBool(offsets[8], object.isFavorite);
-  writer.writeStringList(offsets[9], object.keywords);
-  writer.writeDouble(offsets[10], object.latitude);
-  writer.writeDouble(offsets[11], object.longitude);
-  writer.writeString(offsets[12], object.mediaId);
-  writer.writeString(offsets[13], object.mimeType);
-  writer.writeDateTime(offsets[14], object.modifiedAt);
-  writer.writeStringList(offsets[15], object.objects);
-  writer.writeString(offsets[16], object.ocrText);
-  writer.writeString(offsets[17], object.path);
-  writer.writeString(offsets[18], object.qrPayload);
-  writer.writeLong(offsets[19], object.sizeBytes);
-  writer.writeLong(offsets[20], object.width);
+  writer.writeString(offsets[1], object.cardBody);
+  writer.writeString(offsets[2], object.cardTitle);
+  writer.writeString(offsets[3], object.category);
+  writer.writeDateTime(offsets[4], object.dateTaken);
+  writer.writeString(offsets[5], object.displayName);
+  writer.writeStringList(offsets[6], object.entityTokens);
+  writer.writeBool(offsets[7], object.hasFace);
+  writer.writeBool(offsets[8], object.hasQr);
+  writer.writeString(offsets[9], object.hash);
+  writer.writeLong(offsets[10], object.height);
+  writer.writeDateTime(offsets[11], object.indexedAt);
+  writer.writeBool(offsets[12], object.isFavorite);
+  writer.writeStringList(offsets[13], object.keywords);
+  writer.writeDouble(offsets[14], object.latitude);
+  writer.writeDouble(offsets[15], object.longitude);
+  writer.writeString(offsets[16], object.mediaId);
+  writer.writeString(offsets[17], object.mimeType);
+  writer.writeDateTime(offsets[18], object.modifiedAt);
+  writer.writeStringList(offsets[19], object.objects);
+  writer.writeStringList(offsets[20], object.ocrKeywords);
+  writer.writeString(offsets[21], object.ocrText);
+  writer.writeString(offsets[22], object.path);
+  writer.writeString(offsets[23], object.qrPayload);
+  writer.writeDoubleList(offsets[24], object.semanticEmbedding);
+  writer.writeLong(offsets[25], object.sizeBytes);
+  writer.writeString(offsets[26], object.summary);
+  writer.writeStringList(offsets[27], object.visionKeywords);
+  writer.writeLong(offsets[28], object.width);
 }
 
 PhotoEntity _photoEntityDeserialize(
@@ -324,27 +456,35 @@ PhotoEntity _photoEntityDeserialize(
 ) {
   final object = PhotoEntity();
   object.album = reader.readStringOrNull(offsets[0]);
-  object.category = reader.readStringOrNull(offsets[1]);
-  object.dateTaken = reader.readDateTimeOrNull(offsets[2]);
-  object.displayName = reader.readStringOrNull(offsets[3]);
-  object.hasQr = reader.readBool(offsets[4]);
-  object.hash = reader.readString(offsets[5]);
-  object.height = reader.readLong(offsets[6]);
+  object.cardBody = reader.readStringOrNull(offsets[1]);
+  object.cardTitle = reader.readStringOrNull(offsets[2]);
+  object.category = reader.readStringOrNull(offsets[3]);
+  object.dateTaken = reader.readDateTimeOrNull(offsets[4]);
+  object.displayName = reader.readStringOrNull(offsets[5]);
+  object.entityTokens = reader.readStringList(offsets[6]) ?? [];
+  object.hasFace = reader.readBool(offsets[7]);
+  object.hasQr = reader.readBool(offsets[8]);
+  object.hash = reader.readString(offsets[9]);
+  object.height = reader.readLong(offsets[10]);
   object.id = id;
-  object.indexedAt = reader.readDateTime(offsets[7]);
-  object.isFavorite = reader.readBool(offsets[8]);
-  object.keywords = reader.readStringList(offsets[9]) ?? [];
-  object.latitude = reader.readDoubleOrNull(offsets[10]);
-  object.longitude = reader.readDoubleOrNull(offsets[11]);
-  object.mediaId = reader.readString(offsets[12]);
-  object.mimeType = reader.readStringOrNull(offsets[13]);
-  object.modifiedAt = reader.readDateTimeOrNull(offsets[14]);
-  object.objects = reader.readStringList(offsets[15]) ?? [];
-  object.ocrText = reader.readStringOrNull(offsets[16]);
-  object.path = reader.readString(offsets[17]);
-  object.qrPayload = reader.readStringOrNull(offsets[18]);
-  object.sizeBytes = reader.readLong(offsets[19]);
-  object.width = reader.readLong(offsets[20]);
+  object.indexedAt = reader.readDateTime(offsets[11]);
+  object.isFavorite = reader.readBool(offsets[12]);
+  object.keywords = reader.readStringList(offsets[13]) ?? [];
+  object.latitude = reader.readDoubleOrNull(offsets[14]);
+  object.longitude = reader.readDoubleOrNull(offsets[15]);
+  object.mediaId = reader.readString(offsets[16]);
+  object.mimeType = reader.readStringOrNull(offsets[17]);
+  object.modifiedAt = reader.readDateTimeOrNull(offsets[18]);
+  object.objects = reader.readStringList(offsets[19]) ?? [];
+  object.ocrKeywords = reader.readStringList(offsets[20]) ?? [];
+  object.ocrText = reader.readStringOrNull(offsets[21]);
+  object.path = reader.readString(offsets[22]);
+  object.qrPayload = reader.readStringOrNull(offsets[23]);
+  object.semanticEmbedding = reader.readDoubleList(offsets[24]) ?? [];
+  object.sizeBytes = reader.readLong(offsets[25]);
+  object.summary = reader.readStringOrNull(offsets[26]);
+  object.visionKeywords = reader.readStringList(offsets[27]) ?? [];
+  object.width = reader.readLong(offsets[28]);
   return object;
 }
 
@@ -360,42 +500,58 @@ P _photoEntityDeserializeProp<P>(
     case 1:
       return (reader.readStringOrNull(offset)) as P;
     case 2:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 3:
       return (reader.readStringOrNull(offset)) as P;
     case 4:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 6:
-      return (reader.readLong(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 7:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 8:
       return (reader.readBool(offset)) as P;
     case 9:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 11:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 12:
-      return (reader.readString(offset)) as P;
-    case 13:
-      return (reader.readStringOrNull(offset)) as P;
-    case 14:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 15:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 16:
-      return (reader.readStringOrNull(offset)) as P;
-    case 17:
-      return (reader.readString(offset)) as P;
-    case 18:
-      return (reader.readStringOrNull(offset)) as P;
-    case 19:
       return (reader.readLong(offset)) as P;
+    case 11:
+      return (reader.readDateTime(offset)) as P;
+    case 12:
+      return (reader.readBool(offset)) as P;
+    case 13:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 14:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 15:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 16:
+      return (reader.readString(offset)) as P;
+    case 17:
+      return (reader.readStringOrNull(offset)) as P;
+    case 18:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 19:
+      return (reader.readStringList(offset) ?? []) as P;
     case 20:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 21:
+      return (reader.readStringOrNull(offset)) as P;
+    case 22:
+      return (reader.readString(offset)) as P;
+    case 23:
+      return (reader.readStringOrNull(offset)) as P;
+    case 24:
+      return (reader.readDoubleList(offset) ?? []) as P;
+    case 25:
+      return (reader.readLong(offset)) as P;
+    case 26:
+      return (reader.readStringOrNull(offset)) as P;
+    case 27:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 28:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -538,10 +694,35 @@ extension PhotoEntityQueryWhereSort
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyEntityTokensElement() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'entityTokens'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyOcrKeywordsElement() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'ocrKeywords'),
+      );
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyObjectsElement() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'objects'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere>
+  anyVisionKeywordsElement() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'visionKeywords'),
       );
     });
   }
@@ -574,6 +755,14 @@ extension PhotoEntityQueryWhereSort
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'hasQr'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyHasFace() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'hasFace'),
       );
     });
   }
@@ -760,6 +949,332 @@ extension PhotoEntityQueryWhere
   }
 
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementEqualTo(String entityTokensElement) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'entityTokens',
+          value: [entityTokensElement],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementNotEqualTo(String entityTokensElement) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'entityTokens',
+                lower: [],
+                upper: [entityTokensElement],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'entityTokens',
+                lower: [entityTokensElement],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'entityTokens',
+                lower: [entityTokensElement],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'entityTokens',
+                lower: [],
+                upper: [entityTokensElement],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementGreaterThan(
+    String entityTokensElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'entityTokens',
+          lower: [entityTokensElement],
+          includeLower: include,
+          upper: [],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementLessThan(
+    String entityTokensElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'entityTokens',
+          lower: [],
+          upper: [entityTokensElement],
+          includeUpper: include,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementBetween(
+    String lowerEntityTokensElement,
+    String upperEntityTokensElement, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'entityTokens',
+          lower: [lowerEntityTokensElement],
+          includeLower: includeLower,
+          upper: [upperEntityTokensElement],
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementStartsWith(String EntityTokensElementPrefix) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'entityTokens',
+          lower: [EntityTokensElementPrefix],
+          upper: ['$EntityTokensElementPrefix\u{FFFFF}'],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'entityTokens', value: ['']),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  entityTokensElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.lessThan(
+                indexName: r'entityTokens',
+                upper: [''],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.greaterThan(
+                indexName: r'entityTokens',
+                lower: [''],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.greaterThan(
+                indexName: r'entityTokens',
+                lower: [''],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.lessThan(
+                indexName: r'entityTokens',
+                upper: [''],
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementEqualTo(String ocrKeywordsElement) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'ocrKeywords',
+          value: [ocrKeywordsElement],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementNotEqualTo(String ocrKeywordsElement) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'ocrKeywords',
+                lower: [],
+                upper: [ocrKeywordsElement],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'ocrKeywords',
+                lower: [ocrKeywordsElement],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'ocrKeywords',
+                lower: [ocrKeywordsElement],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'ocrKeywords',
+                lower: [],
+                upper: [ocrKeywordsElement],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementGreaterThan(
+    String ocrKeywordsElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'ocrKeywords',
+          lower: [ocrKeywordsElement],
+          includeLower: include,
+          upper: [],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementLessThan(
+    String ocrKeywordsElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'ocrKeywords',
+          lower: [],
+          upper: [ocrKeywordsElement],
+          includeUpper: include,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementBetween(
+    String lowerOcrKeywordsElement,
+    String upperOcrKeywordsElement, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'ocrKeywords',
+          lower: [lowerOcrKeywordsElement],
+          includeLower: includeLower,
+          upper: [upperOcrKeywordsElement],
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementStartsWith(String OcrKeywordsElementPrefix) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'ocrKeywords',
+          lower: [OcrKeywordsElementPrefix],
+          upper: ['$OcrKeywordsElementPrefix\u{FFFFF}'],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'ocrKeywords', value: ['']),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  ocrKeywordsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.lessThan(indexName: r'ocrKeywords', upper: ['']),
+            )
+            .addWhereClause(
+              IndexWhereClause.greaterThan(
+                indexName: r'ocrKeywords',
+                lower: [''],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.greaterThan(
+                indexName: r'ocrKeywords',
+                lower: [''],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.lessThan(indexName: r'ocrKeywords', upper: ['']),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
   objectsElementEqualTo(String objectsElement) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
@@ -902,6 +1417,172 @@ extension PhotoEntityQueryWhere
             )
             .addWhereClause(
               IndexWhereClause.lessThan(indexName: r'objects', upper: ['']),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementEqualTo(String visionKeywordsElement) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'visionKeywords',
+          value: [visionKeywordsElement],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementNotEqualTo(String visionKeywordsElement) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'visionKeywords',
+                lower: [],
+                upper: [visionKeywordsElement],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'visionKeywords',
+                lower: [visionKeywordsElement],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'visionKeywords',
+                lower: [visionKeywordsElement],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'visionKeywords',
+                lower: [],
+                upper: [visionKeywordsElement],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementGreaterThan(
+    String visionKeywordsElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'visionKeywords',
+          lower: [visionKeywordsElement],
+          includeLower: include,
+          upper: [],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementLessThan(
+    String visionKeywordsElement, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'visionKeywords',
+          lower: [],
+          upper: [visionKeywordsElement],
+          includeUpper: include,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementBetween(
+    String lowerVisionKeywordsElement,
+    String upperVisionKeywordsElement, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'visionKeywords',
+          lower: [lowerVisionKeywordsElement],
+          includeLower: includeLower,
+          upper: [upperVisionKeywordsElement],
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementStartsWith(String VisionKeywordsElementPrefix) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'visionKeywords',
+          lower: [VisionKeywordsElementPrefix],
+          upper: ['$VisionKeywordsElementPrefix\u{FFFFF}'],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'visionKeywords', value: ['']),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  visionKeywordsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.lessThan(
+                indexName: r'visionKeywords',
+                upper: [''],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.greaterThan(
+                indexName: r'visionKeywords',
+                lower: [''],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.greaterThan(
+                indexName: r'visionKeywords',
+                lower: [''],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.lessThan(
+                indexName: r'visionKeywords',
+                upper: [''],
+              ),
             );
       }
     });
@@ -1416,6 +2097,60 @@ extension PhotoEntityQueryWhere
       }
     });
   }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> hasFaceEqualTo(
+    bool hasFace,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'hasFace', value: [hasFace]),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> hasFaceNotEqualTo(
+    bool hasFace,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'hasFace',
+                lower: [],
+                upper: [hasFace],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'hasFace',
+                lower: [hasFace],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'hasFace',
+                lower: [hasFace],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'hasFace',
+                lower: [],
+                upper: [hasFace],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
 }
 
 extension PhotoEntityQueryFilter
@@ -1581,6 +2316,327 @@ extension PhotoEntityQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'album', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'cardBody'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'cardBody'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> cardBodyEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'cardBody',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'cardBody',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'cardBody',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> cardBodyBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'cardBody',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'cardBody',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'cardBody',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'cardBody',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> cardBodyMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'cardBody',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'cardBody', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardBodyIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'cardBody', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'cardTitle'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'cardTitle'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'cardTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'cardTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'cardTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'cardTitle',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'cardTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'cardTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'cardTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'cardTitle',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'cardTitle', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  cardTitleIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'cardTitle', value: ''),
       );
     });
   }
@@ -1975,6 +3031,210 @@ extension PhotoEntityQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'displayName', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementEqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'entityTokens',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'entityTokens',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'entityTokens',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'entityTokens',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'entityTokens',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'entityTokens',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'entityTokens',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'entityTokens',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'entityTokens', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'entityTokens', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'entityTokens', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'entityTokens', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'entityTokens', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'entityTokens', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'entityTokens', length, include, 999999, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  entityTokensLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'entityTokens',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> hasFaceEqualTo(
+    bool value,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'hasFace', value: value),
       );
     });
   }
@@ -3274,6 +4534,200 @@ extension PhotoEntityQueryFilter
   }
 
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementEqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'ocrKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'ocrKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'ocrKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'ocrKeywords',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'ocrKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'ocrKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'ocrKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'ocrKeywords',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'ocrKeywords', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'ocrKeywords', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'ocrKeywords', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'ocrKeywords', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'ocrKeywords', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'ocrKeywords', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'ocrKeywords', length, include, 999999, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  ocrKeywordsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'ocrKeywords',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
   ocrTextIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -3745,6 +5199,143 @@ extension PhotoEntityQueryFilter
   }
 
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingElementEqualTo(
+    double value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'semanticEmbedding',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingElementGreaterThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'semanticEmbedding',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingElementLessThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'semanticEmbedding',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingElementBetween(
+    double lower,
+    double upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'semanticEmbedding',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'semanticEmbedding', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'semanticEmbedding', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'semanticEmbedding', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'semanticEmbedding', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'semanticEmbedding',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  semanticEmbeddingLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'semanticEmbedding',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
   sizeBytesEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -3795,6 +5386,365 @@ extension PhotoEntityQueryFilter
           upper: upper,
           includeUpper: includeUpper,
         ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  summaryIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'summary'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  summaryIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'summary'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> summaryEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'summary',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  summaryGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'summary',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> summaryLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'summary',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> summaryBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'summary',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  summaryStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'summary',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> summaryEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'summary',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> summaryContains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'summary',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> summaryMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'summary',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  summaryIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'summary', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  summaryIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'summary', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementEqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'visionKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'visionKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'visionKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'visionKeywords',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'visionKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'visionKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'visionKeywords',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'visionKeywords',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'visionKeywords', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'visionKeywords', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'visionKeywords', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'visionKeywords', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'visionKeywords', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'visionKeywords', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'visionKeywords', length, include, 999999, true);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  visionKeywordsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'visionKeywords',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
       );
     });
   }
@@ -3877,6 +5827,30 @@ extension PhotoEntityQuerySortBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByCardBody() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardBody', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByCardBodyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardBody', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByCardTitle() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardTitle', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByCardTitleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardTitle', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByCategory() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'category', Sort.asc);
@@ -3910,6 +5884,18 @@ extension PhotoEntityQuerySortBy
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByDisplayNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'displayName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByHasFace() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasFace', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByHasFaceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasFace', Sort.desc);
     });
   }
 
@@ -4081,6 +6067,18 @@ extension PhotoEntityQuerySortBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortBySummary() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'summary', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortBySummaryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'summary', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByWidth() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'width', Sort.asc);
@@ -4105,6 +6103,30 @@ extension PhotoEntityQuerySortThenBy
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByAlbumDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'album', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByCardBody() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardBody', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByCardBodyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardBody', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByCardTitle() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardTitle', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByCardTitleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cardTitle', Sort.desc);
     });
   }
 
@@ -4141,6 +6163,18 @@ extension PhotoEntityQuerySortThenBy
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByDisplayNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'displayName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByHasFace() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasFace', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByHasFaceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasFace', Sort.desc);
     });
   }
 
@@ -4324,6 +6358,18 @@ extension PhotoEntityQuerySortThenBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenBySummary() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'summary', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenBySummaryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'summary', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByWidth() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'width', Sort.asc);
@@ -4347,6 +6393,22 @@ extension PhotoEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByCardBody({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cardBody', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByCardTitle({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cardTitle', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByCategory({
     bool caseSensitive = true,
   }) {
@@ -4366,6 +6428,18 @@ extension PhotoEntityQueryWhereDistinct
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'displayName', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByEntityTokens() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'entityTokens');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByHasFace() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hasFace');
     });
   }
 
@@ -4447,6 +6521,12 @@ extension PhotoEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByOcrKeywords() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'ocrKeywords');
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByOcrText({
     bool caseSensitive = true,
   }) {
@@ -4471,9 +6551,30 @@ extension PhotoEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct>
+  distinctBySemanticEmbedding() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'semanticEmbedding');
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctBySizeBytes() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'sizeBytes');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctBySummary({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'summary', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByVisionKeywords() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'visionKeywords');
     });
   }
 
@@ -4498,6 +6599,18 @@ extension PhotoEntityQueryProperty
     });
   }
 
+  QueryBuilder<PhotoEntity, String?, QQueryOperations> cardBodyProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cardBody');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, String?, QQueryOperations> cardTitleProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cardTitle');
+    });
+  }
+
   QueryBuilder<PhotoEntity, String?, QQueryOperations> categoryProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'category');
@@ -4513,6 +6626,19 @@ extension PhotoEntityQueryProperty
   QueryBuilder<PhotoEntity, String?, QQueryOperations> displayNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'displayName');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, List<String>, QQueryOperations>
+  entityTokensProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'entityTokens');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, bool, QQueryOperations> hasFaceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'hasFace');
     });
   }
 
@@ -4588,6 +6714,13 @@ extension PhotoEntityQueryProperty
     });
   }
 
+  QueryBuilder<PhotoEntity, List<String>, QQueryOperations>
+  ocrKeywordsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'ocrKeywords');
+    });
+  }
+
   QueryBuilder<PhotoEntity, String?, QQueryOperations> ocrTextProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'ocrText');
@@ -4606,9 +6739,29 @@ extension PhotoEntityQueryProperty
     });
   }
 
+  QueryBuilder<PhotoEntity, List<double>, QQueryOperations>
+  semanticEmbeddingProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'semanticEmbedding');
+    });
+  }
+
   QueryBuilder<PhotoEntity, int, QQueryOperations> sizeBytesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'sizeBytes');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, String?, QQueryOperations> summaryProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'summary');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, List<String>, QQueryOperations>
+  visionKeywordsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'visionKeywords');
     });
   }
 

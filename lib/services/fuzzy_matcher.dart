@@ -1,20 +1,48 @@
 class FuzzyMatcher {
+  /// Soft match for typos and short stems people type from memory.
   bool isMatch(String source, String target) {
-    final a = source.toLowerCase();
-    final b = target.toLowerCase();
+    final a = _normalize(source);
+    final b = _normalize(target);
+    if (a.isEmpty || b.isEmpty) return false;
     if (a == b) return true;
+
+    // Stem / prefix: «пасп» → «паспорт», «догов» → «договор»
+    if (a.length >= 4 && b.length >= a.length && b.startsWith(a)) return true;
+    if (b.length >= 4 && a.length >= b.length && a.startsWith(b)) return true;
+
+    // Contained memory fragment inside a longer keyword
+    if (a.length >= 5 && b.length > a.length && b.contains(a)) return true;
+    if (b.length >= 5 && a.length > b.length && a.contains(b)) return true;
+
     if (a.length < 4 || b.length < 4) return false;
-    final maxDistance = a.length >= 8 || b.length >= 8 ? 2 : 1;
+
+    final maxDistance = _allowedDistance(a.length, b.length);
     return distance(a, b, maxDistance: maxDistance) <= maxDistance;
   }
 
   double similarity(String source, String target) {
+    source = _normalize(source);
+    target = _normalize(target);
     if (source.isEmpty && target.isEmpty) return 1;
+    if (source == target) return 1;
+    if (source.length >= 4 && target.startsWith(source)) {
+      return 0.92;
+    }
+    if (target.length >= 4 && source.startsWith(target)) {
+      return 0.92;
+    }
     final maxLength = source.length > target.length
         ? source.length
         : target.length;
     if (maxLength == 0) return 1;
     return 1 - (distance(source, target) / maxLength);
+  }
+
+  int _allowedDistance(int aLen, int bLen) {
+    final longest = aLen > bLen ? aLen : bLen;
+    if (longest >= 10) return 3;
+    if (longest >= 6) return 2;
+    return 1;
   }
 
   int distance(String source, String target, {int? maxDistance}) {
@@ -70,4 +98,7 @@ class FuzzyMatcher {
     if (c < result) result = c;
     return result;
   }
+
+  String _normalize(String value) =>
+      value.trim().toLowerCase().replaceAll('ё', 'е');
 }

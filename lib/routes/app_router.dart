@@ -9,6 +9,7 @@ import 'package:pinpic/features/permission/presentation/permission_screen.dart';
 import 'package:pinpic/features/photo_details/presentation/photo_details_screen.dart';
 import 'package:pinpic/features/privacy/presentation/privacy_screen.dart';
 import 'package:pinpic/features/results/presentation/results_screen.dart';
+import 'package:pinpic/features/scan/presentation/scan_document_screen.dart';
 import 'package:pinpic/features/settings/presentation/settings_screen.dart';
 import 'package:pinpic/features/splash/presentation/splash_screen.dart';
 import 'package:pinpic/routes/app_page_transitions.dart';
@@ -97,6 +98,11 @@ GoRouter createAppRouter() {
         path: RoutePaths.privacy,
         name: 'privacy',
         builder: (context, state) => const PrivacyScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.scanDocument,
+        name: 'scanDocument',
+        builder: (context, state) => const ScanDocumentScreen(),
       ),
     ],
   );

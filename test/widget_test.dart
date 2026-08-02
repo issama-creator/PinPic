@@ -1,11 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pinpic/core/constants/app_constants.dart';
+import 'package:pinpic/core/utils/hash_utils.dart';
+import 'package:pinpic/features/home/presentation/home_screen.dart';
+import 'package:pinpic/shared/models/app_settings_entity.dart';
 import 'package:pinpic/theme/app_theme.dart';
 import 'package:pinpic/widgets/async_state_view.dart';
 import 'package:pinpic/widgets/pinpic_logo.dart';
 
 void main() {
+  test('does not rescan an unchanged completed library on app entry', () {
+    final settings = AppSettingsEntity.initial()
+      ..initialScanCompleted = true
+      ..totalIndexed = 124
+      ..indexedPipelineVersion = HashUtils.indexPipelineVersion;
+
+    expect(shouldStartStartupIndex(settings, 124), isFalse);
+    expect(shouldStartStartupIndex(settings, 125), isTrue);
+    settings.indexedPipelineVersion = HashUtils.indexPipelineVersion - 1;
+    expect(shouldStartStartupIndex(settings, 124), isTrue);
+  });
+
   testWidgets('PinPic brand widgets render', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

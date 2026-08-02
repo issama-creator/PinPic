@@ -16,14 +16,41 @@ class PhotoEntity {
 
   String? ocrText;
 
+  /// Short local "memory card" line built from OCR (brand · amount · date).
+  String? summary;
+
+  /// Smart-card headline (IKEA, Договор, Wi‑Fi…).
+  String? cardTitle;
+
+  /// Smart-card body rows joined by newlines (amount, date, number…).
+  String? cardBody;
+
+  /// Searchable structured facts: amounts, phones, emails, doc numbers…
+  @Index(type: IndexType.value, caseSensitive: false)
+  List<String> entityTokens = [];
+
+  /// Normalized OCR terms are stored separately from generic keywords so the
+  /// search ranker can explain an exact text match without guessing.
+  @Index(type: IndexType.value, caseSensitive: false)
+  List<String> ocrKeywords = [];
+
   @Index(type: IndexType.value, caseSensitive: false)
   List<String> objects = [];
+
+  /// High-confidence labels emitted by the visual pipeline. Keeping these
+  /// separate preserves their stronger weight during hybrid ranking.
+  @Index(type: IndexType.value, caseSensitive: false)
+  List<String> visionKeywords = [];
 
   @Index(caseSensitive: false)
   String? category;
 
   @Index(type: IndexType.value, caseSensitive: false)
   List<String> keywords = [];
+
+  /// Compact on-device semantic feature vector. It is derived only from local
+  /// OCR, vision and metadata signals and is never uploaded.
+  List<double> semanticEmbedding = [];
 
   @Index(unique: true, replace: true)
   late String hash;
@@ -51,6 +78,9 @@ class PhotoEntity {
   @Index()
   bool hasQr = false;
 
+  @Index()
+  bool hasFace = false;
+
   String? qrPayload;
 
   late DateTime indexedAt;
@@ -69,9 +99,16 @@ class PhotoEntity {
     required this.indexedAt,
     this.displayName,
     this.ocrText,
+    this.summary,
+    this.cardTitle,
+    this.cardBody,
+    this.entityTokens = const [],
+    this.ocrKeywords = const [],
     this.objects = const [],
+    this.visionKeywords = const [],
     this.category,
     this.keywords = const [],
+    this.semanticEmbedding = const [],
     this.dateTaken,
     this.latitude,
     this.longitude,
@@ -79,6 +116,7 @@ class PhotoEntity {
     this.mimeType,
     this.isFavorite = false,
     this.hasQr = false,
+    this.hasFace = false,
     this.qrPayload,
     this.modifiedAt,
   });

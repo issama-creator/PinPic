@@ -11,6 +11,7 @@ abstract final class RoutePaths {
   static const String offline = '/offline';
   static const String settings = '/settings';
   static const String privacy = '/privacy';
+  static const String scanDocument = '/scan-document';
 
   static String photoDetailsPath(String mediaId) => '/photo/$mediaId';
 }

@@ -8,6 +8,7 @@ import 'package:pinpic/theme/app_colors.dart';
 import 'package:pinpic/widgets/app_scaffold.dart';
 import 'package:pinpic/widgets/async_state_view.dart';
 import 'package:pinpic/widgets/photo_thumbnail.dart';
+import 'package:pinpic/widgets/smart_memory_card.dart';
 
 class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({
@@ -202,32 +203,63 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
             ),
           ),
         ),
-        Expanded(
-          child: GridView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.72,
-            ),
-            itemCount: _hits.length + (_loadingMore ? 2 : 0),
-            itemBuilder: (context, index) {
-              if (index >= _hits.length) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final hit = _hits[index];
-              return _ResultCard(
-                hit: hit,
-                onTap: () => context.push(
-                  RoutePaths.photoDetailsPath(hit.photo.mediaId),
-                ),
-              );
-            },
-          ),
-        ),
+        Expanded(child: _buildResultSections(context)),
       ],
+    );
+  }
+
+  Widget _buildResultSections(BuildContext context) {
+    final direct = _hits.where((hit) => !hit.isSimilar).toList();
+    final similar = _hits.where((hit) => hit.isSimilar).toList();
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        if (direct.isNotEmpty) _resultGrid(context, direct),
+        if (similar.isNotEmpty) ...[
+          if (direct.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                child: Text(
+                  'Похожие результаты',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          _resultGrid(context, similar),
+        ],
+        if (_loadingMore)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _resultGrid(BuildContext context, List<SearchHit> hits) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final hit = hits[index];
+          return _ResultCard(
+            hit: hit,
+            onTap: () =>
+                context.push(RoutePaths.photoDetailsPath(hit.photo.mediaId)),
+          );
+        }, childCount: hits.length),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.55,
+        ),
+      ),
     );
   }
 
@@ -242,6 +274,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 }
 
+String _friendlyEvidence(String value) => value;
+
 class _ResultCard extends ConsumerWidget {
   const _ResultCard({required this.hit, required this.onTap});
 
@@ -250,6 +284,10 @@ class _ResultCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final chips = hit.evidence.isEmpty
+        ? <String>[hit.reason]
+        : hit.evidence.map(_friendlyEvidence).take(3).toList(growable: false);
+
     return Material(
       color: const Color(0xFF16161F),
       borderRadius: BorderRadius.circular(16),
@@ -304,26 +342,82 @@ class _ResultCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    hit.photo.displayName ?? hit.photo.category ?? 'Фото',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                  SmartMemoryCard(photo: hit.photo, compact: true),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      for (final chip in chips)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF242430),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            chip,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    hit.reason,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 1.3,
-                      color: AppColors.textMuted,
-                    ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          hit.photo.dateTaken == null
+                              ? 'Дата неизвестна'
+                              : MaterialLocalizations.of(
+                                  context,
+                                ).formatShortDate(hit.photo.dateTaken!),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: hit.photo.isFavorite
+                            ? 'Убрать из избранного'
+                            : 'В избранное',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 26,
+                          height: 26,
+                        ),
+                        onPressed: () async {
+                          await ref
+                              .read(photoRepositoryProvider)
+                              .setFavorite(
+                                hit.photo.mediaId,
+                                !hit.photo.isFavorite,
+                              );
+                          ref.invalidate(favoritesProvider);
+                          ref.read(searchServiceProvider).invalidateCaches();
+                        },
+                        icon: Icon(
+                          hit.photo.isFavorite
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          size: 18,
+                          color: hit.photo.isFavorite
+                              ? AppColors.purple
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -334,4 +428,3 @@ class _ResultCard extends ConsumerWidget {
     );
   }
 }
-

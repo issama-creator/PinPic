@@ -48,28 +48,40 @@ void main() {
 
     test('still classifies real whole-word object labels', () {
       expect(
-        engine.classify(
-          ocrText: null,
-          objects: const ['Car'],
-          hasQr: false,
-        ),
+        engine.classify(ocrText: null, objects: const ['Car'], hasQr: false),
         CategoryEngine.cars,
       );
       expect(
-        engine.classify(
-          ocrText: null,
-          objects: const ['Cat'],
-          hasQr: false,
-        ),
+        engine.classify(ocrText: null, objects: const ['Cat'], hasQr: false),
         CategoryEngine.animals,
       );
       expect(
+        engine.classify(ocrText: null, objects: const ['Person'], hasQr: false),
+        CategoryEngine.people,
+      );
+    });
+
+    test('does not turn generic Animal/Wildlife guesses into a category', () {
+      expect(
         engine.classify(
           ocrText: null,
-          objects: const ['Person'],
+          objects: const ['Pencil', 'Sharpener', 'Box', 'Animal', 'Wildlife'],
           hasQr: false,
         ),
-        CategoryEngine.people,
+        isNot(CategoryEngine.animals),
+      );
+    });
+
+    test('does not categorize bead pin objects as passwords or plants', () {
+      expect(
+        engine.classify(
+          // Tesseract can hallucinate "tree" in bead texture; image labels
+          // must remain the source of broad visual categories.
+          ocrText: 'oe ee - res, tree ters, egeore',
+          objects: const ['Far', 'Safety', 'Pin', 'Textile', 'Scarf'],
+          hasQr: false,
+        ),
+        isNull,
       );
     });
 
@@ -80,7 +92,26 @@ void main() {
           objects: const [],
           hasQr: false,
         ),
-        CategoryEngine.documents,
+        CategoryEngine.contracts,
+      );
+    });
+
+    test('detects passport and ticket as distinct document categories', () {
+      expect(
+        engine.classify(
+          ocrText: 'ПАСПОРТ RUSSIAN FEDERATION',
+          objects: const [],
+          hasQr: false,
+        ),
+        CategoryEngine.passports,
+      );
+      expect(
+        engine.classify(
+          ocrText: 'БИЛЕТ НА КОНЦЕРТ 123456',
+          objects: const [],
+          hasQr: false,
+        ),
+        CategoryEngine.tickets,
       );
     });
 
@@ -188,6 +219,23 @@ void main() {
       );
       expect(CategoryEngine.inferFromTokens({'лев', 'lion'}), isNull);
     });
+
+    test('uses Документы as a search umbrella without merging categories', () {
+      final categories = CategoryEngine.inferCategoriesFromTokens({
+        'документ',
+        'documents',
+      });
+      expect(
+        categories,
+        containsAll([
+          CategoryEngine.documents,
+          CategoryEngine.receipts,
+          CategoryEngine.tickets,
+          CategoryEngine.passwords,
+          CategoryEngine.businessCards,
+        ]),
+      );
+    });
   });
 
   group('SynonymEngine', () {
@@ -222,7 +270,15 @@ void main() {
       final expanded = engine.expand({'девушка'});
       expect(
         expanded,
-        containsAll(['девушка', 'woman', 'girl', 'человек', 'люди', 'person', 'face']),
+        containsAll([
+          'девушка',
+          'woman',
+          'girl',
+          'человек',
+          'люди',
+          'person',
+          'face',
+        ]),
       );
 
       final keywords = KeywordEngine().build(
@@ -247,14 +303,17 @@ void main() {
       expect(fromEnglish, containsAll(['растение', 'цветок', 'дерево']));
     });
 
-    test('a photo with a detected "Person" object is findable by "человек"', () {
-      final keywords = KeywordEngine().build(
-        ocrText: null,
-        objects: const ['Person'],
-        category: 'Люди',
-      );
-      expect(keywords, containsAll(['person', 'человек', 'люди']));
-    });
+    test(
+      'a photo with a detected "Person" object is findable by "человек"',
+      () {
+        final keywords = KeywordEngine().build(
+          ocrText: null,
+          objects: const ['Person'],
+          category: 'Люди',
+        );
+        expect(keywords, containsAll(['person', 'человек', 'люди']));
+      },
+    );
 
     test('expands "пароль" to English password/login labels and back', () {
       final expanded = engine.expand({'пароль'});
@@ -262,6 +321,40 @@ void main() {
 
       final fromEnglish = engine.expand({'password'});
       expect(fromEnglish, containsAll(['пароль', 'пароли']));
+    });
+
+    test('bridges child, Wi-Fi and airport intents', () {
+      expect(
+        engine.expand({'ребенок'}),
+        containsAll(['дети', 'сын', 'дочь', 'child']),
+      );
+      expect(
+        engine.expand({'вайфай'}),
+        containsAll(['wifi', 'password', 'пароль', 'ssid']),
+      );
+      expect(
+        engine.expand({'аэропорт'}),
+        containsAll(['airport', 'самолет', 'plane']),
+      );
+    });
+
+    test('normalizes IKEA transliteration into a single search intent', () {
+      expect(
+        engine.expand({'икея'}),
+        containsAll(['ikea', 'икеа', 'мебель', 'магазин']),
+      );
+    });
+
+    test('receipt category injects useful non-OCR search intent', () {
+      final keywords = KeywordEngine().build(
+        ocrText: 'IKEA 4990',
+        objects: const ['Paper'],
+        category: CategoryEngine.receipts,
+      );
+      expect(
+        keywords,
+        containsAll(['чек', 'квитанция', 'магазин', 'покупка', 'документ']),
+      );
     });
 
     test('covers everyday gallery topics with 5+ synonyms each', () {
@@ -315,14 +408,17 @@ void main() {
       }
     });
 
-    test('a photo with a detected "Plant" object is findable by "растение"', () {
-      final keywords = KeywordEngine().build(
-        ocrText: null,
-        objects: const ['Plant'],
-        category: null,
-      );
-      expect(keywords, containsAll(['plant', 'растение', 'цветок']));
-    });
+    test(
+      'a photo with a detected "Plant" object is findable by "растение"',
+      () {
+        final keywords = KeywordEngine().build(
+          ocrText: null,
+          objects: const ['Plant'],
+          category: null,
+        );
+        expect(keywords, containsAll(['plant', 'растение', 'цветок']));
+      },
+    );
   });
 
   group('FuzzyMatcher', () {
@@ -380,6 +476,70 @@ void main() {
 
       expect(result.score, greaterThan(8));
       expect(result.reason, contains('паспорт'));
+    });
+
+    test('semantic-only hit is explicitly marked similar', () {
+      final result = ranking.rank(
+        photo: _photo(id: 'tower'),
+        normalizedQuery: 'париж',
+        originalTokens: {'париж'},
+        expandedTokens: {'париж'},
+        semanticSimilarity: 0.42,
+      );
+
+      expect(result.isSimilar, isTrue);
+      expect(result.evidence, contains('✓ По смыслу'));
+      expect(result.confidence, lessThan(70));
+    });
+
+    test('exact OCR exposes the matching evidence', () {
+      final result = ranking.rank(
+        photo: _photo(
+          id: 'ikea',
+          ocr: 'IKEA кассовый чек 1540',
+          keywords: ['ikea', 'чек'],
+        ),
+        normalizedQuery: 'ikea',
+        originalTokens: {'ikea'},
+        expandedTokens: {'ikea'},
+      );
+
+      expect(
+        result.evidence.any((e) => e.contains('OCR') || e.contains('IKEA')),
+        isTrue,
+      );
+      expect(result.confidence, greaterThanOrEqualTo(95));
+    });
+
+    test('follows the explicit source priority', () {
+      final photo = _photo(
+        id: 'receipt',
+        ocr: 'IKEA receipt 4990',
+        keywords: ['ikea', 'receipt'],
+      )..objects = ['Paper'];
+      final ocr = ranking.rank(
+        photo: photo,
+        normalizedQuery: 'ikea',
+        originalTokens: {'ikea'},
+        expandedTokens: {'ikea'},
+      );
+      final keyword = ranking.rank(
+        photo: _photo(id: 'keyword', keywords: ['receipt']),
+        normalizedQuery: 'receipt',
+        originalTokens: {'receipt'},
+        expandedTokens: {'receipt'},
+      );
+      final category = ranking.rank(
+        photo: _photo(id: 'category')..category = CategoryEngine.receipts,
+        normalizedQuery: 'документ',
+        originalTokens: {'документ'},
+        expandedTokens: {'документ'},
+        categoryFilter: CategoryEngine.receipts,
+      );
+
+      expect(ocr.score, 100);
+      expect(keyword.score, lessThanOrEqualTo(95));
+      expect(category.score, 80);
     });
   });
 }

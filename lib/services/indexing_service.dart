@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:pinpic/core/utils/hash_utils.dart';
 import 'package:pinpic/services/category_engine.dart';
-import 'package:pinpic/services/face_service.dart';
+import 'package:pinpic/services/document_summary_service.dart';
 import 'package:pinpic/services/keyword_engine.dart';
+import 'package:pinpic/services/local_semantic_embedding_service.dart';
 import 'package:pinpic/services/ocr_service.dart';
 import 'package:pinpic/services/photo_media_service.dart';
 import 'package:pinpic/services/qr_service.dart';
-import 'package:pinpic/services/vision_service.dart';
+import 'package:pinpic/shared/models/device_photo.dart';
 import 'package:pinpic/shared/models/index_progress.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
 import 'package:pinpic/shared/repositories/photo_repository.dart';
@@ -21,29 +22,29 @@ class IndexingService {
     required SettingsRepository settingsRepository,
     OcrService? ocrService,
     QrService? qrService,
-    VisionService? visionService,
-    FaceService? faceService,
     CategoryEngine? categoryEngine,
     KeywordEngine? keywordEngine,
+    LocalSemanticEmbeddingService? embeddingService,
+    DocumentSummaryService? summaryService,
   }) : _media = mediaService,
        _photos = photoRepository,
        _settings = settingsRepository,
        _ocr = ocrService ?? OcrService(),
        _qr = qrService ?? QrService(),
-       _vision = visionService ?? VisionService(),
-       _faces = faceService ?? FaceService(),
        _categories = categoryEngine ?? CategoryEngine(),
-       _keywords = keywordEngine ?? KeywordEngine();
+       _keywords = keywordEngine ?? KeywordEngine(),
+       _embeddings = embeddingService ?? LocalSemanticEmbeddingService(),
+       _summaries = summaryService ?? DocumentSummaryService();
 
   final PhotoMediaService _media;
   final PhotoRepository _photos;
   final SettingsRepository _settings;
   final OcrService _ocr;
   final QrService _qr;
-  final VisionService _vision;
-  final FaceService _faces;
   final CategoryEngine _categories;
   final KeywordEngine _keywords;
+  final LocalSemanticEmbeddingService _embeddings;
+  final DocumentSummaryService _summaries;
 
   final _progressController = StreamController<IndexProgress>.broadcast();
 
@@ -56,16 +57,9 @@ class IndexingService {
   bool get isRunning => _running;
 
   static const _pageSize = 24;
+  static const _maxIndexedSignalTerms = 120;
 
-  /// Raster formats that Android's `BitmapFactory` (used internally by both
-  /// ML Kit's `InputImage.fromFilePath` and Tesseract4Android's
-  /// `TessBaseAPI.setImage`) can actually decode. Anything else — most
-  /// notably `image/svg+xml`, which photo_manager's `RequestType.image`
-  /// filter happily includes even though it's a vector format, not a
-  /// bitmap — must never reach those native calls: Tesseract's plugin has
-  /// no try/catch around its decode step and a failed decode there throws
-  /// an uncaught exception on a raw Java `Thread`, which crashes the whole
-  /// app process (not just the indexing isolate/future).
+  /// Raster formats that Android's `BitmapFactory` can decode.
   static const _decodableMimeTypes = {
     'image/jpeg',
     'image/jpg',
@@ -117,6 +111,9 @@ class IndexingService {
       var newlyIndexed = 0;
       var failedPhotos = 0;
       var batchesSinceStatsUpdate = 0;
+      final deepTasks = <_DeepOcrTask>[];
+      var ranDeepPass = false;
+      final fastStopwatch = Stopwatch()..start();
 
       while (!_stopRequested) {
         final batch = await _media.fetchDevicePhotos(
@@ -176,58 +173,89 @@ class IndexingService {
           }
 
           try {
-            final ocrFuture = _ocr.extractText(device.path);
+            final ocrFuture = _ocr.extractFastText(device.path);
             final qrFuture = _qr.scan(device.path);
-            final visionFuture = _vision.detectLabelsAndObjects(device.path);
-            final faceFuture = _faces.hasFace(device.path);
             final ocrText = await ocrFuture;
             final qr = await qrFuture;
-            final objects = await visionFuture;
-            final hasFace = await faceFuture;
+            const objects = <String>[];
             final category = _categories.classify(
               ocrText: ocrText,
               objects: objects,
               hasQr: qr.hasQr,
-              hasFace: hasFace,
               displayName: device.displayName,
               mimeType: device.mimeType,
             );
-            final keywords = _keywords.build(
+            final summaryEntities = _summaries.extract(
               ocrText: ocrText,
-              objects: objects,
               category: category,
-              displayName: device.displayName,
+              dateTaken: device.createDate,
               qrPayload: qr.payload,
-              hasQr: qr.hasQr,
-              hasFace: hasFace,
             );
-
-            toUpsert.add(
-              PhotoEntity.create(
-                mediaId: device.mediaId,
-                path: device.path,
-                hash: hash,
-                width: device.width,
-                height: device.height,
-                sizeBytes: device.sizeBytes,
-                indexedAt: DateTime.now(),
-                displayName: device.displayName,
+            final entityTokens = summaryEntities.searchTokens;
+            final keywords = [
+              ..._keywords.build(
                 ocrText: ocrText,
                 objects: objects,
                 category: category,
-                keywords: keywords,
-                dateTaken: device.createDate,
-                latitude: device.latitude,
-                longitude: device.longitude,
+                displayName: device.displayName,
                 album: device.album,
-                mimeType: device.mimeType,
-                isFavorite: existing?.isFavorite ?? false,
-                hasQr: qr.hasQr,
                 qrPayload: qr.payload,
-                modifiedAt: device.modifiedDate,
+                hasQr: qr.hasQr,
               ),
+              ...entityTokens,
+            ];
+            final ocrKeywords = _capTerms(_keywords.tokenize(ocrText));
+            final semanticEmbedding = _embeddings.forPhoto(
+              ocrTerms: ocrKeywords,
+              visionTerms: const [],
+              categoryTerms: [if (category != null) category],
+              hasQr: qr.hasQr,
+              hasFace: false,
             );
+
+            final entity = PhotoEntity.create(
+              mediaId: device.mediaId,
+              path: device.path,
+              hash: hash,
+              width: device.width,
+              height: device.height,
+              sizeBytes: device.sizeBytes,
+              indexedAt: DateTime.now(),
+              displayName: device.displayName,
+              ocrText: ocrText,
+              summary: summaryEntities.summaryLine,
+              ocrKeywords: ocrKeywords,
+              objects: objects,
+              visionKeywords: const [],
+              category: category,
+              keywords: _capTerms(keywords),
+              semanticEmbedding: semanticEmbedding,
+              dateTaken: device.createDate,
+              latitude: device.latitude,
+              longitude: device.longitude,
+              album: device.album,
+              mimeType: device.mimeType,
+              isFavorite: existing?.isFavorite ?? false,
+              hasQr: qr.hasQr,
+              hasFace: false,
+              qrPayload: qr.payload,
+              modifiedAt: device.modifiedDate,
+            );
+            _summaries.applyToPhoto(
+              entity,
+              summaryEntities,
+              fallbackTitle: category,
+            );
+            toUpsert.add(entity);
             newlyIndexed++;
+            if (_shouldRunDeepOcr(
+              ocrText,
+              category: category,
+              mimeType: device.mimeType,
+              hasQr: qr.hasQr,
+            )) {
+              deepTasks.add(_DeepOcrTask(device));
+            }
           } catch (error, stack) {
             failedPhotos++;
             debugPrint('Failed to index ${device.mediaId}: $error\n$stack');
@@ -258,6 +286,25 @@ class IndexingService {
       if (!_stopRequested) {
         await _photos.deleteMissingMediaIds(deviceMediaIds);
       }
+      fastStopwatch.stop();
+      if (kDebugMode) {
+        debugPrint(
+          'Index fast pass: $newlyIndexed photos in '
+          '${fastStopwatch.elapsedMilliseconds}ms; deep OCR queued: ${deepTasks.length}',
+        );
+      }
+      if (!_stopRequested && deepTasks.isNotEmpty) {
+        ranDeepPass = true;
+        final deepStopwatch = Stopwatch()..start();
+        await _runDeepOcrPass(deepTasks);
+        deepStopwatch.stop();
+        if (kDebugMode) {
+          debugPrint(
+            'Index deep OCR: ${deepTasks.length} photos in '
+            '${deepStopwatch.elapsedMilliseconds}ms',
+          );
+        }
+      }
       final indexed = await _photos.countAll();
       final categories = await _photos.distinctCategories();
       await _settings.updateIndexStats(
@@ -265,6 +312,9 @@ class IndexingService {
         totalIndexed: indexed,
         totalCategories: categories.length,
         initialScanCompleted: !_stopRequested,
+        indexedPipelineVersion: _stopRequested
+            ? null
+            : HashUtils.indexPipelineVersion,
       );
 
       _emit(
@@ -276,6 +326,7 @@ class IndexingService {
           status: _stopRequested
               ? IndexingStatus.paused
               : IndexingStatus.completed,
+          stage: ranDeepPass ? IndexingStage.deep : IndexingStage.fast,
           currentFileName: newlyIndexed > 0
               ? 'Индексировано +$newlyIndexed'
               : null,
@@ -303,6 +354,128 @@ class IndexingService {
     _stopRequested = true;
   }
 
+  List<String> _capTerms(List<String> terms) {
+    if (terms.length <= _maxIndexedSignalTerms) return terms;
+    return terms.take(_maxIndexedSignalTerms).toList(growable: false);
+  }
+
+  /// Deep OCR for documents / screenshots / QR / weak Latin fast OCR.
+  /// Ordinary empty photos stay on the fast path only.
+  bool _shouldRunDeepOcr(
+    String? fastText, {
+    String? category,
+    String? mimeType,
+    bool hasQr = false,
+  }) {
+    if (category != null && CategoryEngine.documentFamily.contains(category)) {
+      return true;
+    }
+    if (hasQr) return true;
+    final mime = mimeType?.toLowerCase() ?? '';
+    if (mime.contains('png')) {
+      return _ocr.needsDeepText(fastText);
+    }
+    final fast = fastText?.trim() ?? '';
+    if (fast.isEmpty) return false;
+    return _ocr.needsDeepText(fast);
+  }
+
+  Future<void> _runDeepOcrPass(List<_DeepOcrTask> tasks) async {
+    _emit(
+      IndexProgress(
+        processed: 0,
+        total: tasks.length,
+        isRunning: true,
+        isCompleted: false,
+        status: IndexingStatus.running,
+        stage: IndexingStage.deep,
+        currentFileName: 'Читаем текст на фото',
+      ),
+    );
+
+    final pending = <PhotoEntity>[];
+    for (var index = 0; index < tasks.length && !_stopRequested; index++) {
+      final task = tasks[index];
+      try {
+        final existing = await _photos.findByMediaId(task.mediaId);
+        if (existing != null) {
+          final deepText = await _ocr.extractDeepText(
+            task.path,
+            aggressive: true,
+          );
+          final mergedText = _ocr.pickRicherText(existing.ocrText, deepText);
+          if (mergedText != null && mergedText != existing.ocrText) {
+            final category = _categories.classify(
+              ocrText: mergedText,
+              objects: existing.objects,
+              hasQr: existing.hasQr,
+              displayName: existing.displayName,
+              mimeType: existing.mimeType,
+            );
+            final ocrKeywords = _capTerms(_keywords.tokenize(mergedText));
+            final entities = _summaries.extract(
+              ocrText: mergedText,
+              category: category,
+              dateTaken: existing.dateTaken,
+              qrPayload: existing.qrPayload,
+            );
+            existing
+              ..ocrText = mergedText
+              ..ocrKeywords = ocrKeywords
+              ..category = category
+              ..objects = const []
+              ..visionKeywords = const []
+              ..hasFace = false
+              ..keywords = _capTerms([
+                ..._keywords.build(
+                  ocrText: mergedText,
+                  objects: const [],
+                  category: category,
+                  displayName: existing.displayName,
+                  album: existing.album,
+                  qrPayload: existing.qrPayload,
+                  hasQr: existing.hasQr,
+                ),
+                ...entities.searchTokens,
+              ])
+              ..semanticEmbedding = _embeddings.forPhoto(
+                ocrTerms: ocrKeywords,
+                visionTerms: const [],
+                categoryTerms: [if (category != null) category],
+                hasQr: existing.hasQr,
+                hasFace: false,
+              )
+              ..indexedAt = DateTime.now();
+            _summaries.applyToPhoto(
+              existing,
+              entities,
+              fallbackTitle: category,
+            );
+            pending.add(existing);
+          }
+        }
+      } catch (error, stack) {
+        debugPrint('Deep OCR failed for ${task.mediaId}: $error\n$stack');
+      }
+
+      if (pending.length >= _pageSize) {
+        await _photos.upsertAll(pending);
+        pending.clear();
+      }
+      _emit(
+        _progress.copyWith(
+          processed: index + 1,
+          total: tasks.length,
+          stage: IndexingStage.deep,
+          currentFileName: task.displayName ?? task.mediaId,
+        ),
+      );
+    }
+    if (pending.isNotEmpty) {
+      await _photos.upsertAll(pending);
+    }
+  }
+
   Future<void> _updateStats(int total) async {
     final indexed = await _photos.countAll();
     final categories = await _photos.distinctCategories();
@@ -324,8 +497,17 @@ class IndexingService {
     stop();
     await _ocr.dispose();
     await _qr.dispose();
-    await _vision.dispose();
-    await _faces.dispose();
     await _progressController.close();
   }
+}
+
+class _DeepOcrTask {
+  _DeepOcrTask(DevicePhoto photo)
+    : mediaId = photo.mediaId,
+      path = photo.path,
+      displayName = photo.displayName;
+
+  final String mediaId;
+  final String path;
+  final String? displayName;
 }

@@ -15,6 +15,9 @@ _IndexProgress _$IndexProgressFromJson(Map<String, dynamic> json) =>
       status:
           $enumDecodeNullable(_$IndexingStatusEnumMap, json['status']) ??
           IndexingStatus.idle,
+      stage:
+          $enumDecodeNullable(_$IndexingStageEnumMap, json['stage']) ??
+          IndexingStage.fast,
       currentFileName: json['currentFileName'] as String?,
       errorMessage: json['errorMessage'] as String?,
     );
@@ -26,6 +29,7 @@ Map<String, dynamic> _$IndexProgressToJson(_IndexProgress instance) =>
       'isRunning': instance.isRunning,
       'isCompleted': instance.isCompleted,
       'status': _$IndexingStatusEnumMap[instance.status]!,
+      'stage': _$IndexingStageEnumMap[instance.stage]!,
       'currentFileName': instance.currentFileName,
       'errorMessage': instance.errorMessage,
     };
@@ -36,4 +40,9 @@ const _$IndexingStatusEnumMap = {
   IndexingStatus.paused: 'paused',
   IndexingStatus.completed: 'completed',
   IndexingStatus.failed: 'failed',
+};
+
+const _$IndexingStageEnumMap = {
+  IndexingStage.fast: 'fast',
+  IndexingStage.deep: 'deep',
 };

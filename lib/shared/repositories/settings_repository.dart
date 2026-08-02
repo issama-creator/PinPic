@@ -51,6 +51,7 @@ class SettingsRepository {
       settings.totalPhotosFound = 0;
       settings.totalIndexed = 0;
       settings.totalCategories = 0;
+      settings.indexedPipelineVersion = 0;
       settings.lastIndexedAt = null;
     });
   }
@@ -76,12 +77,16 @@ class SettingsRepository {
     required int totalIndexed,
     required int totalCategories,
     bool initialScanCompleted = false,
+    int? indexedPipelineVersion,
   }) {
     return update((settings) {
       settings.totalPhotosFound = totalPhotosFound;
       settings.totalIndexed = totalIndexed;
       settings.totalCategories = totalCategories;
       settings.lastIndexedAt = DateTime.now();
+      if (indexedPipelineVersion != null) {
+        settings.indexedPipelineVersion = indexedPipelineVersion;
+      }
       if (initialScanCompleted) {
         settings.initialScanCompleted = true;
       }

@@ -5,8 +5,10 @@ import 'package:pinpic/services/database_service.dart';
 import 'package:pinpic/services/indexing_service.dart';
 import 'package:pinpic/services/permission_service.dart';
 import 'package:pinpic/services/photo_media_service.dart';
+import 'package:pinpic/services/photo_text_refresh_service.dart';
 import 'package:pinpic/services/search_service.dart';
 import 'package:pinpic/services/thumbnail_cache_service.dart';
+import 'package:pinpic/services/vector_search_service.dart';
 import 'package:pinpic/shared/models/app_settings_entity.dart';
 import 'package:pinpic/shared/models/index_progress.dart';
 import 'package:pinpic/shared/repositories/photo_repository.dart';
@@ -39,10 +41,25 @@ final searchHistoryRepositoryProvider = Provider<SearchHistoryRepository>((
   return SearchHistoryRepository(ref.watch(databaseServiceProvider));
 });
 
+final vectorSearchServiceProvider = Provider<VectorSearchService>((ref) {
+  return VectorSearchService(
+    photoRepository: ref.watch(photoRepositoryProvider),
+  );
+});
+
 final searchServiceProvider = Provider<SearchService>((ref) {
   return SearchService(
     photoRepository: ref.watch(photoRepositoryProvider),
     historyRepository: ref.watch(searchHistoryRepositoryProvider),
+    vectorSearchService: ref.watch(vectorSearchServiceProvider),
+  );
+});
+
+final photoTextRefreshServiceProvider = Provider<PhotoTextRefreshService>((
+  ref,
+) {
+  return PhotoTextRefreshService(
+    photoRepository: ref.watch(photoRepositoryProvider),
   );
 });
 
@@ -88,6 +105,7 @@ class IndexProgressNotifier extends Notifier<IndexProgress> {
         _lastStatsRefresh = now;
         ref.invalidate(appSettingsProvider);
         ref.invalidate(photoStatsProvider);
+        ref.invalidate(categoryCountsProvider);
       }
       if (value.status == IndexingStatus.completed) {
         ref.read(searchServiceProvider).invalidateCaches();
@@ -151,6 +169,12 @@ final photoStatsProvider = FutureProvider.autoDispose<PhotoStats>((ref) async {
     categories: settings.totalCategories,
   );
 });
+
+final categoryCountsProvider =
+    FutureProvider.autoDispose<Map<String, int>>((ref) async {
+      await ref.watch(appBootstrapProvider.future);
+      return ref.watch(photoRepositoryProvider).categoryCounts();
+    });
 
 final favoritesProvider = FutureProvider.autoDispose((ref) async {
   await ref.watch(appBootstrapProvider.future);

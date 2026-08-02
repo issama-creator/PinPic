@@ -3,123 +3,163 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
-import 'package:tesseract_ocr/ocr_engine_config.dart';
-import 'package:tesseract_ocr/tesseract_ocr.dart';
+import 'package:pinpic/services/deep_ocr_bridge.dart';
 
-/// ML Kit's on-device text recognizer has no Cyrillic script option — only
-/// latin/chinese/devanagari/japanese/korean — so it can't read Russian text
-/// at all (confirmed limitation, not a config mistake). Tesseract (fully
-/// offline, bundled `rus`+`eng` trained data) fills that gap. Both engines
-/// run and their output is merged: ML Kit is fast and very accurate for
-/// Latin text/digits, Tesseract covers Cyrillic (and backs up Latin too).
+/// Fast ML Kit Latin OCR + offline PP-OCRv5 Cyrillic deep pass on Android.
+///
+/// ML Kit has no Cyrillic script option. The deep pass (NCNN PaddleOCR v5
+/// with the eslav dictionary) fills that gap for tickets, passports and
+/// other Russian document photos. Indexing keeps the two passes separate so
+/// search becomes available before deep OCR finishes.
+///
+/// Deep OCR on Android also runs contrast/upscale preprocess and retries
+/// rotated frames when the first pass looks weak.
 class OcrService {
-  OcrService()
-    : _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
+  OcrService({DeepOcrBridge? deepOcr})
+    : _recognizer = TextRecognizer(script: TextRecognitionScript.latin),
+      _deepOcr = deepOcr ?? DeepOcrBridge();
 
   final TextRecognizer _recognizer;
+  final DeepOcrBridge _deepOcr;
 
-  static const _tesseractConfig = OCRConfig(
-    language: 'rus+eng',
-    engine: OCREngine.tesseract,
-  );
-
+  /// Legacy complete OCR API. Indexing uses the two explicit passes below so
+  /// the quick index can become searchable before deep OCR finishes.
   Future<String?> extractText(String path) async {
+    final fastText = await extractFastText(path);
+    if (!needsDeepText(fastText)) return fastText;
+    final deepText = await extractDeepText(path);
+    return mergeTexts(fastText, deepText);
+  }
+
+  /// Low-latency Latin/digits OCR. Enough for many receipts and filenames.
+  Future<String?> extractFastText(String path) async {
     final file = File(path);
     if (!await file.exists()) return null;
-
-    final texts = <String>[];
 
     try {
       final input = InputImage.fromFilePath(path);
       final result = await _recognizer.processImage(input);
       final text = result.text.trim();
-      if (text.isNotEmpty) texts.add(text);
       if (kDebugMode) {
         debugPrint(
-          'OCR(mlkit)[$path]: ${text.isEmpty ? '<empty>' : text.replaceAll('\n', ' | ')}',
+          'OCR(fast)[$path]: ${text.isEmpty ? '<empty>' : text.replaceAll('\n', ' | ')}',
         );
       }
+      return text.isEmpty ? null : text;
     } catch (error, stack) {
       debugPrint('OCR(mlkit) failed for $path: $error\n$stack');
-    }
-
-    // The tesseract_ocr plugin's native decode step has no exception
-    // handling on its background Java thread: a file it can't decode as a
-    // bitmap (SVG, corrupted download, etc.) throws an *uncaught*
-    // RuntimeException there and crashes the whole app process, not just
-    // this call. Dart-side try/catch can't protect against a native crash,
-    // so we verify the file is a genuine decodable raster image ourselves
-    // first and skip Tesseract entirely if it isn't.
-    if (await _canDecodeAsBitmap(path)) {
-      String? contrastPath;
-      try {
-        // Bright graphic tickets (green bg + bold Cyrillic) often lose words
-        // to Tesseract on the raw file; a grayscale+contrast pass helps.
-        contrastPath = await _writeContrastCopy(path);
-        final raw = await TesseractOcr.extractText(
-          contrastPath ?? path,
-          config: _tesseractConfig,
-        );
-        final text = raw.trim();
-        if (text.isNotEmpty) texts.add(text);
-        if (kDebugMode) {
-          debugPrint(
-            'OCR(tesseract)[$path]: ${text.isEmpty ? '<empty>' : text.replaceAll('\n', ' | ')}',
-          );
-        }
-      } catch (error, stack) {
-        debugPrint('OCR(tesseract) failed for $path: $error\n$stack');
-      } finally {
-        if (contrastPath != null) {
-          try {
-            await File(contrastPath).delete();
-          } catch (_) {}
-        }
-      }
-    } else if (kDebugMode) {
-      debugPrint('OCR(tesseract) skipped, not a decodable bitmap: $path');
-    }
-
-    if (texts.isEmpty) return null;
-    return texts.join('\n');
-  }
-
-  /// Grayscale + contrast boost → temp JPEG for Tesseract. Returns null if
-  /// preprocessing fails (caller then uses the original path).
-  Future<String?> _writeContrastCopy(String path) async {
-    try {
-      final raw = await File(path).readAsBytes();
-      final decoded = img.decodeImage(raw);
-      if (decoded == null) return null;
-
-      // Cap long edge so huge gallery photos don't stall indexing.
-      final longest = decoded.width > decoded.height
-          ? decoded.width
-          : decoded.height;
-      final sized = longest > 1600
-          ? img.copyResize(
-              decoded,
-              width: decoded.width >= decoded.height ? 1600 : null,
-              height: decoded.height > decoded.width ? 1600 : null,
-            )
-          : decoded;
-
-      final gray = img.grayscale(sized);
-      final boosted = img.adjustColor(gray, contrast: 1.35);
-      final bytes = img.encodeJpg(boosted, quality: 92);
-
-      final dir = await getTemporaryDirectory();
-      final out = File(
-        '${dir.path}/pinpic_ocr_${DateTime.now().microsecondsSinceEpoch}.jpg',
-      );
-      await out.writeAsBytes(bytes, flush: true);
-      return out.path;
-    } catch (error) {
-      debugPrint('OCR contrast preprocess failed for $path: $error');
       return null;
     }
+  }
+
+  /// High-quality offline Cyrillic OCR (PP-OCRv5). Prefer [aggressive] for
+  /// documents so preprocess + rotation retries can recover sideways shots.
+  Future<String?> extractDeepText(
+    String path, {
+    bool aggressive = true,
+  }) async {
+    final file = File(path);
+    if (!await file.exists()) return null;
+
+    if (!await _canDecodeAsBitmap(path)) {
+      if (kDebugMode) {
+        debugPrint('OCR(deep) skipped, not a decodable bitmap: $path');
+      }
+      return null;
+    }
+
+    try {
+      final text = await _deepOcr.recognize(path, aggressive: aggressive);
+      if (kDebugMode) {
+        debugPrint(
+          'OCR(deep)[$path]: ${text == null || text.isEmpty ? '<empty>' : text.replaceAll('\n', ' | ')}',
+        );
+      }
+      return text;
+    } catch (error, stack) {
+      debugPrint('OCR(deep) failed for $path: $error\n$stack');
+      return null;
+    }
+  }
+
+  /// Full re-read used by the photo details "Перечитать" action.
+  Future<String?> extractBestText(String path) async {
+    final fast = await extractFastText(path);
+    final deep = await extractDeepText(path, aggressive: true);
+    return pickRicherText(fast, deep) ?? mergeTexts(fast, deep);
+  }
+
+  /// Deep OCR is needed unless ML Kit extracted recognisable Latin text.
+  /// ML Kit only supports Latin and often turns Cyrillic letters into
+  /// convincing-looking gibberish (for example, «БИЛЕТ»). Letter count alone
+  /// is therefore unsafe: it would skip deep OCR for exactly these documents.
+  bool needsDeepText(String? fastText) {
+    final text = fastText?.trim() ?? '';
+    if (text.isEmpty) return true;
+    final latinLetters = RegExp(r'[a-zA-Z]').allMatches(text).length;
+    if (latinLetters < 8) return true;
+
+    const usefulLatinTerms = {
+      'boarding',
+      'contract',
+      'document',
+      'ikea',
+      'invoice',
+      'login',
+      'passport',
+      'password',
+      'receipt',
+      'ticket',
+      'total',
+      'warranty',
+      'prescription',
+    };
+    final words = RegExp(
+      r'[a-zA-Z]+',
+    ).allMatches(text.toLowerCase()).map((match) => match.group(0)!);
+    return !words.any(usefulLatinTerms.contains);
+  }
+
+  String? mergeTexts(String? fastText, String? deepText) {
+    final parts = <String>{
+      if (fastText != null && fastText.trim().isNotEmpty) fastText.trim(),
+      if (deepText != null && deepText.trim().isNotEmpty) deepText.trim(),
+    };
+    if (parts.isEmpty) return null;
+    return parts.join('\n');
+  }
+
+  /// Prefer the richer single pass (usually deep) over a noisy merge when one
+  /// clearly dominates — keeps search keywords cleaner.
+  String? pickRicherText(String? a, String? b) {
+    final left = a?.trim();
+    final right = b?.trim();
+    if (left == null || left.isEmpty) return right;
+    if (right == null || right.isEmpty) return left;
+    final leftScore = scoreText(left);
+    final rightScore = scoreText(right);
+    if (rightScore >= leftScore * 1.15) return right;
+    if (leftScore >= rightScore * 1.15) return left;
+    return mergeTexts(left, right);
+  }
+
+  static int scoreText(String text) {
+    if (text.isEmpty) return 0;
+    var letters = 0;
+    var cyrillic = 0;
+    var digits = 0;
+    for (final unit in text.runes) {
+      final ch = String.fromCharCode(unit);
+      if (RegExp(r'[А-Яа-яЁё]').hasMatch(ch)) {
+        cyrillic++;
+        letters++;
+      } else if (RegExp(r'[A-Za-z]').hasMatch(ch)) {
+        letters++;
+      } else if (RegExp(r'\d').hasMatch(ch)) {
+        digits++;
+      }
+    }
+    return letters + cyrillic * 2 + digits + text.length ~/ 5;
   }
 
   Future<bool> _canDecodeAsBitmap(String path) async {

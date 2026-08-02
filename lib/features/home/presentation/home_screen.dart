@@ -7,12 +7,24 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:pinpic/core/constants/app_constants.dart';
 import 'package:pinpic/core/providers/core_providers.dart';
+import 'package:pinpic/core/utils/hash_utils.dart';
 import 'package:pinpic/features/settings/presentation/settings_screen.dart';
 import 'package:pinpic/routes/route_paths.dart';
+import 'package:pinpic/services/category_engine.dart';
+import 'package:pinpic/shared/models/app_settings_entity.dart';
 import 'package:pinpic/shared/models/index_progress.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
 import 'package:pinpic/widgets/async_state_view.dart';
 import 'package:pinpic/widgets/photo_thumbnail.dart';
+
+/// A completed library is left untouched on app entry until the visible media
+/// count or the index rules change. Per-file fingerprints still protect the
+/// actual sync when a photo is added or removed.
+bool shouldStartStartupIndex(AppSettingsEntity settings, int deviceCount) {
+  return !settings.initialScanCompleted ||
+      settings.totalIndexed != deviceCount ||
+      settings.indexedPipelineVersion != HashUtils.indexPipelineVersion;
+}
 
 final class _HomeStyle {
   const _HomeStyle({
@@ -46,11 +58,7 @@ final class _HomeStyle {
     accent: Color(0xFFA855F7),
     text: Colors.white,
     border: Color(0x14FFFFFF),
-    washColors: [
-      Color(0x242A1250),
-      Color(0x100E0820),
-      Color(0x00050510),
-    ],
+    washColors: [Color(0x242A1250), Color(0x100E0820), Color(0x00050510)],
   );
 
   static const light = _HomeStyle(
@@ -62,11 +70,7 @@ final class _HomeStyle {
     accent: Color(0xFF9333EA),
     text: Color(0xFF12121A),
     border: Color(0x221A1A22),
-    washColors: [
-      Color(0x22C4B5FD),
-      Color(0x10EDE9FE),
-      Color(0x00F6F7FB),
-    ],
+    washColors: [Color(0x22C4B5FD), Color(0x10EDE9FE), Color(0x00F6F7FB)],
   );
 
   static _HomeStyle of(BuildContext context) {
@@ -88,28 +92,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   static const _categories = <_QuickCategory>[
     _QuickCategory('Документы', Icons.description_outlined, Color(0xFF5B8CFF)),
     _QuickCategory('Чеки', Icons.receipt_long_outlined, Color(0xFF34C759)),
-    _QuickCategory('QR', Icons.qr_code_2_rounded, Color(0xFFA855F7)),
-    _QuickCategory('Животные', Icons.pets_outlined, Color(0xFFFFB020)),
-    _QuickCategory(
-      'Скриншоты',
-      Icons.screenshot_monitor_outlined,
-      Color(0xFF64B5F6),
-    ),
-    _QuickCategory(
-      'Машины',
-      Icons.directions_car_filled_outlined,
-      Color(0xFFFF6B8A),
-    ),
-    _QuickCategory('Еда', Icons.ramen_dining_outlined, Color(0xFFFF8A4C)),
-    _QuickCategory('Люди', Icons.people_alt_outlined, Color(0xFFFFD24A)),
-    _QuickCategory('Пароли', Icons.password_rounded, Color(0xFFFF5C7A)),
     _QuickCategory(
       'Билеты',
       Icons.confirmation_number_outlined,
       Color(0xFF34AADC),
     ),
-    _QuickCategory('Визитки', Icons.badge_outlined, Color(0xFF00B8A9)),
-    _QuickCategory('Растения', Icons.eco_outlined, Color(0xFF4CAF50)),
+    _QuickCategory('Гарантии', Icons.verified_outlined, Color(0xFF4CC9F0)),
+    _QuickCategory('Визитки', Icons.contact_page_outlined, Color(0xFF00B8A9)),
+    _QuickCategory('Пароли', Icons.wifi_password_rounded, Color(0xFFFF5C7A)),
+    _QuickCategory('QR', Icons.qr_code_2_rounded, Color(0xFFA855F7)),
+    _QuickCategory('Паспорта', Icons.badge_outlined, Color(0xFF7C9CFF)),
   ];
 
   @override
@@ -143,13 +135,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final deviceCount = await ref
         .read(photoMediaServiceProvider)
         .countDevicePhotos();
-    final indexedRecently =
-        settings.lastIndexedAt != null &&
-        DateTime.now().difference(settings.lastIndexedAt!) <
-            const Duration(minutes: 5);
-    if (settings.initialScanCompleted &&
-        settings.totalIndexed == deviceCount &&
-        indexedRecently) {
+    if (!shouldStartStartupIndex(settings, deviceCount)) {
       return;
     }
     unawaited(ref.read(indexProgressProvider.notifier).start());
@@ -165,7 +151,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   /// rather than run a free-text keyword search — otherwise unmatched
   /// queries silently fall back to "similar results" (i.e. arbitrary recent
   /// photos), making every category look identical.
+  ///
+  /// «Документы» is the umbrella collection: open it as a document intent
+  /// query so receipts, tickets, passports, etc. all appear together.
   void _openCategory(String category) {
+    if (category == CategoryEngine.documents) {
+      context.push(
+        '${RoutePaths.results}?q=${Uri.encodeQueryComponent('документ')}',
+      );
+      return;
+    }
     context.push(
       '${RoutePaths.results}?category=${Uri.encodeQueryComponent(category)}',
     );
@@ -178,11 +173,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            isLight ? Brightness.dark : Brightness.light,
+        statusBarIconBrightness: isLight ? Brightness.dark : Brightness.light,
         systemNavigationBarColor: style.bg,
-        systemNavigationBarIconBrightness:
-            isLight ? Brightness.dark : Brightness.light,
+        systemNavigationBarIconBrightness: isLight
+            ? Brightness.dark
+            : Brightness.light,
       ),
       child: Scaffold(
         backgroundColor: style.bg,
@@ -211,6 +206,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     onOpenResults: _openResults,
                     onOpenCategory: _openCategory,
                     onOpenFilters: () => context.push(RoutePaths.filters),
+                    onScanDocument: () =>
+                        context.push(RoutePaths.scanDocument),
                   ),
                   _FavoritesTab(
                     onOpenPhoto: (mediaId) =>
@@ -237,12 +234,14 @@ class _SearchTab extends ConsumerStatefulWidget {
     required this.onOpenResults,
     required this.onOpenCategory,
     required this.onOpenFilters,
+    required this.onScanDocument,
   });
 
   final List<_QuickCategory> categories;
   final ValueChanged<String> onOpenResults;
   final ValueChanged<String> onOpenCategory;
   final VoidCallback onOpenFilters;
+  final VoidCallback onScanDocument;
 
   @override
   ConsumerState<_SearchTab> createState() => _SearchTabState();
@@ -291,6 +290,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
   Widget build(BuildContext context) {
     final recentAsync = ref.watch(recentSearchesProvider);
     final statsAsync = ref.watch(photoStatsProvider);
+    final countsAsync = ref.watch(categoryCountsProvider);
     final settingsAsync = ref.watch(appSettingsProvider);
     final progress = ref.watch(indexProgressProvider);
     final formatter = NumberFormat.decimalPattern('ru');
@@ -316,6 +316,22 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
             ),
           ),
         ),
+        if (!typing)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: OutlinedButton.icon(
+                onPressed: widget.onScanDocument,
+                icon: const Icon(Icons.document_scanner_outlined),
+                label: const Text('Сканировать важное'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: style.text,
+                  side: BorderSide(color: style.border),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ),
         if (typing && _hot.isNotEmpty)
           SliverToBoxAdapter(
             child: Padding(
@@ -361,7 +377,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
               child: Text(
-                'Быстрый поиск',
+                'Коллекции',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -374,21 +390,65 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: widget.categories.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 0.88,
+              child: countsAsync.when(
+                loading: () => GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: widget.categories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.78,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = widget.categories[index];
+                    return _CategoryTile(
+                      item: item,
+                      count: null,
+                      onTap: () => widget.onOpenCategory(item.label),
+                    );
+                  },
                 ),
-                itemBuilder: (context, index) {
-                  final item = widget.categories[index];
-                  return _CategoryTile(
-                    item: item,
-                    onTap: () => widget.onOpenCategory(item.label),
+                error: (_, __) => GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: widget.categories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.78,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = widget.categories[index];
+                    return _CategoryTile(
+                      item: item,
+                      count: null,
+                      onTap: () => widget.onOpenCategory(item.label),
+                    );
+                  },
+                ),
+                data: (counts) {
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: widget.categories.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 0.78,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = widget.categories[index];
+                      return _CategoryTile(
+                        item: item,
+                        count: _collectionCount(item.label, counts),
+                        onTap: () => widget.onOpenCategory(item.label),
+                      );
+                    },
                   );
                 },
               ),
@@ -421,15 +481,21 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                   final indexedCount = stats.indexed > 0
                       ? stats.indexed
                       : progress.processed;
+                  final counts = countsAsync.asData?.value ?? const <String, int>{};
+                  var documents = 0;
+                  for (final category in CategoryEngine.documentFamily) {
+                    documents += counts[category] ?? 0;
+                  }
 
-                  return _StatsCard(
-                    photosLabel: formatter.format(indexedCount),
-                    ocrLabel: formatter.format(stats.withOcr),
-                    objectsLabel: formatter.format(stats.withObjects),
+                  return _MemoryStatusCard(
+                    rememberedLabel: formatter.format(indexedCount),
+                    withTextLabel: formatter.format(stats.withOcr),
+                    documentsLabel: formatter.format(documents),
                     progress: liveFraction,
                     percent: percent,
                     isRunning: progress.isRunning,
                     status: progress.status,
+                    stage: progress.stage,
                     errorMessage: progress.errorMessage,
                     onResume: () =>
                         ref.read(indexProgressProvider.notifier).start(),
@@ -581,45 +647,70 @@ class _InlineSearchField extends StatelessWidget {
         border: Border.all(color: style.border),
       ),
       alignment: Alignment.center,
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        textInputAction: TextInputAction.search,
-        onSubmitted: onSubmitted,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: style.text,
-        ),
-        cursorColor: style.accent,
-        decoration: InputDecoration(
-          isDense: true,
-          filled: true,
-          fillColor: Colors.transparent,
-          hintText: 'Что ищем?',
-          hintStyle: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-            color: style.muted,
-          ),
-          prefixIcon: Icon(
-            Icons.search_rounded,
-            color: style.muted,
-            size: 22,
-          ),
-          suffixIcon: IconButton(
-            onPressed: onFilters,
-            icon: Icon(
-              Icons.tune_rounded,
-              color: style.accent,
-              size: 22,
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) {
+          final hasText = controller.text.isNotEmpty;
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            textInputAction: TextInputAction.search,
+            onSubmitted: onSubmitted,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              color: style.text,
             ),
-          ),
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
-        ),
+            cursorColor: style.accent,
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: Colors.transparent,
+              hintText: 'Что вы помните?',
+              hintStyle: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+                color: style.muted,
+              ),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: style.muted,
+                size: 22,
+              ),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasText)
+                    IconButton(
+                      tooltip: 'Очистить',
+                      onPressed: controller.clear,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: style.muted,
+                        size: 20,
+                      ),
+                    ),
+                  IconButton(
+                    onPressed: onFilters,
+                    icon: Icon(
+                      Icons.tune_rounded,
+                      color: style.accent,
+                      size: 22,
+                    ),
+                  ),
+                ],
+              ),
+              suffixIconConstraints: BoxConstraints(
+                minWidth: hasText ? 96 : 48,
+                minHeight: 48,
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          );
+        },
       ),
     );
   }
@@ -633,15 +724,34 @@ class _QuickCategory {
   final Color color;
 }
 
+int _collectionCount(String label, Map<String, int> counts) {
+  if (label == 'Документы') {
+    var total = 0;
+    for (final category in CategoryEngine.documentFamily) {
+      total += counts[category] ?? 0;
+    }
+    return total;
+  }
+  return counts[label] ?? 0;
+}
+
 class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.item, required this.onTap});
+  const _CategoryTile({
+    required this.item,
+    required this.onTap,
+    this.count,
+  });
 
   final _QuickCategory item;
   final VoidCallback onTap;
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
     final style = _HomeStyle.of(context);
+    final label = count != null && count! > 0
+        ? '${item.label} $count'
+        : item.label;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -662,13 +772,14 @@ class _CategoryTile extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              item.label,
+              label,
               textAlign: TextAlign.center,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
+                height: 1.15,
                 color: style.label,
               ),
             ),
@@ -679,100 +790,126 @@ class _CategoryTile extends StatelessWidget {
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  const _StatsCard({
-    required this.photosLabel,
-    required this.ocrLabel,
-    required this.objectsLabel,
+class _MemoryStatusCard extends StatelessWidget {
+  const _MemoryStatusCard({
+    required this.rememberedLabel,
+    required this.withTextLabel,
+    required this.documentsLabel,
     required this.progress,
     required this.percent,
     required this.status,
+    required this.stage,
     required this.onResume,
     this.isRunning = false,
     this.errorMessage,
   });
 
-  final String photosLabel;
-  final String ocrLabel;
-  final String objectsLabel;
+  final String rememberedLabel;
+  final String withTextLabel;
+  final String documentsLabel;
   final double progress;
   final int percent;
   final bool isRunning;
   final IndexingStatus status;
+  final IndexingStage stage;
   final String? errorMessage;
   final VoidCallback onResume;
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = switch (status) {
-      IndexingStatus.running => 'Индексация...',
-      IndexingStatus.paused => 'Индексация на паузе',
-      IndexingStatus.failed => errorMessage ?? 'Ошибка индексации',
-      IndexingStatus.completed => 'Индексация завершена',
+    final style = _HomeStyle.of(context);
+    final ready = status == IndexingStatus.completed ||
+        (status == IndexingStatus.idle && progress >= 1);
+    final busy = status == IndexingStatus.running || isRunning;
+    final needsAction =
+        status == IndexingStatus.failed || status == IndexingStatus.paused;
+
+    final headline = switch (status) {
+      IndexingStatus.running =>
+        stage == IndexingStage.fast
+            ? 'Запоминаем галерею'
+            : 'Читаем текст на фото',
+      IndexingStatus.paused => 'Память на паузе',
+      IndexingStatus.failed => 'Не удалось обновить память',
+      IndexingStatus.completed => 'Память готова',
       IndexingStatus.idle =>
-        progress <= 0 ? 'Индексация не начата' : 'Индексация',
+        progress <= 0 ? 'Память ещё пустая' : 'Память готова',
     };
 
-    final style = _HomeStyle.of(context);
+    final subtitle = switch (status) {
+      IndexingStatus.running => 'Поиск уже можно пробовать',
+      IndexingStatus.paused => 'Продолжите, когда удобно',
+      IndexingStatus.failed => errorMessage ?? 'Нажмите, чтобы повторить',
+      IndexingStatus.completed => 'Спросите то, что помните',
+      IndexingStatus.idle =>
+        progress <= 0
+            ? 'Откройте доступ и начните'
+            : 'Спросите то, что помните',
+    };
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 16),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
-        color: style.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: style.border),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            style.accent.withValues(alpha: style == _HomeStyle.dark ? 0.18 : 0.10),
+            style.card,
+            style.card,
+          ],
+          stops: const [0.0, 0.42, 1.0],
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Статистика',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: style.text,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: style.accent.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  ready ? Icons.auto_awesome_rounded : Icons.psychology_alt_rounded,
+                  color: style.accent,
+                  size: 22,
                 ),
               ),
-              const Spacer(),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: style.muted,
-                size: 22,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
+              const SizedBox(width: 12),
               Expanded(
-                child: _StatCell(
-                  value: photosLabel,
-                  label: 'Фото\nиндексировано',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headline,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: style.text,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: style.label,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Expanded(
-                child: _StatCell(value: ocrLabel, label: 'С фото\nOCR'),
-              ),
-              Expanded(
-                child: _StatCell(value: objectsLabel, label: 'С\nобъектами'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Flexible(
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: style.label,
-                  ),
-                ),
-              ),
-              if (status == IndexingStatus.failed ||
-                  status == IndexingStatus.paused)
+              if (needsAction)
                 IconButton(
                   onPressed: onResume,
                   tooltip: 'Продолжить',
@@ -780,37 +917,120 @@ class _StatsCard extends StatelessWidget {
                   icon: Icon(
                     Icons.refresh_rounded,
                     color: style.accent,
-                    size: 20,
+                    size: 22,
                   ),
                 ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    value: progress <= 0 && isRunning
-                        ? null
-                        : progress.clamp(0, 1),
-                    minHeight: 8,
-                    backgroundColor: style.muted.withValues(alpha: 0.18),
-                    valueColor: AlwaysStoppedAnimation<Color>(style.accent),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '$percent%',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: style.text,
-                ),
-              ),
-              const SizedBox(width: 4),
             ],
           ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _MemoryMetric(
+                  value: rememberedLabel,
+                  label: 'в памяти',
+                ),
+              ),
+              _MemoryMetricDivider(color: style.border),
+              Expanded(
+                child: _MemoryMetric(
+                  value: withTextLabel,
+                  label: 'с текстом',
+                ),
+              ),
+              _MemoryMetricDivider(color: style.border),
+              Expanded(
+                child: _MemoryMetric(
+                  value: documentsLabel,
+                  label: 'документов',
+                ),
+              ),
+            ],
+          ),
+          if (busy || needsAction || (!ready && progress > 0 && progress < 1)) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(
+                      value: progress <= 0 && busy
+                          ? null
+                          : progress.clamp(0, 1),
+                      minHeight: 6,
+                      backgroundColor: style.muted.withValues(alpha: 0.16),
+                      valueColor: AlwaysStoppedAnimation<Color>(style.accent),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '$percent%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: style.muted,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _MemoryMetric extends StatelessWidget {
+  const _MemoryMetric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _HomeStyle.of(context);
+    return Column(
+      children: [
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: style.text,
+            height: 1.05,
+            letterSpacing: -0.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: style.muted,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MemoryMetricDivider extends StatelessWidget {
+  const _MemoryMetricDivider({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 34,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: color,
     );
   }
 }
@@ -832,11 +1052,7 @@ class _AccessCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.photo_library_outlined,
-            color: style.accent,
-            size: 30,
-          ),
+          Icon(Icons.photo_library_outlined, color: style.accent, size: 30),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -853,10 +1069,7 @@ class _AccessCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Разрешите доступ, чтобы начать локальный поиск.',
-                  style: TextStyle(
-                    color: style.muted,
-                    height: 1.35,
-                  ),
+                  style: TextStyle(color: style.muted, height: 1.35),
                 ),
               ],
             ),
@@ -864,44 +1077,6 @@ class _AccessCard extends StatelessWidget {
           TextButton(onPressed: onOpen, child: const Text('Открыть')),
         ],
       ),
-    );
-  }
-}
-
-class _StatCell extends StatelessWidget {
-  const _StatCell({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = _HomeStyle.of(context);
-    return Column(
-      children: [
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: style.text,
-            height: 1.05,
-            letterSpacing: -0.4,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: style.muted,
-            height: 1.2,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1033,7 +1208,9 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? _HomeStyle.of(context).accent : _HomeStyle.of(context).muted;
+    final color = selected
+        ? _HomeStyle.of(context).accent
+        : _HomeStyle.of(context).muted;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -1220,4 +1397,3 @@ class _FavoritesTabState extends ConsumerState<_FavoritesTab> {
     );
   }
 }
-

@@ -31,6 +31,17 @@ class PhotoRepository {
     return categories;
   }
 
+  Future<Map<String, int>> categoryCounts() async {
+    final photos = await _isar.photos.filter().categoryIsNotNull().findAll();
+    final counts = <String, int>{};
+    for (final photo in photos) {
+      final category = photo.category?.trim();
+      if (category == null || category.isEmpty) continue;
+      counts[category] = (counts[category] ?? 0) + 1;
+    }
+    return counts;
+  }
+
   Future<PhotoEntity?> findByMediaId(String mediaId) {
     return _isar.photos.filter().mediaIdEqualTo(mediaId).findFirst();
   }
@@ -188,6 +199,18 @@ class PhotoRepository {
     };
   }
 
+  /// Bounded local scan used only by the semantic vector index. Isar does not
+  /// have an ANN vector type, so callers ask for a small top-K and keep this
+  /// pool bounded; lexical retrieval remains the fast primary path.
+  Future<List<PhotoEntity>> semanticCandidatePool({int limit = 2400}) {
+    return _isar.photos
+        .filter()
+        .semanticEmbeddingIsNotEmpty()
+        .sortByDateTakenDesc()
+        .limit(limit)
+        .findAll();
+  }
+
   Future<List<PhotoEntity>> searchCandidatesForTokens({
     required Set<String> tokens,
     String? category,
@@ -233,6 +256,23 @@ class PhotoRepository {
         candidates[photo.mediaId] = photo;
       }
 
+      // OCR and vision terms have their own indexed fields. Querying them
+      // directly means an OCR-heavy photo is discoverable even if its generic
+      // keyword list was capped during indexing.
+      final ocrMatches = await _isar.photos
+          .where()
+          .ocrKeywordsElementEqualTo(token)
+          .limit(perTokenLimit)
+          .findAll();
+      final entityMatches = await _isar.photos
+          .where()
+          .entityTokensElementEqualTo(token)
+          .limit(perTokenLimit)
+          .findAll();
+      for (final photo in [...ocrMatches, ...entityMatches]) {
+        candidates[photo.mediaId] = photo;
+      }
+
       if (token.length >= 3 && candidates.length < limit) {
         final prefix = await _isar.photos
             .where()
@@ -240,6 +280,19 @@ class PhotoRepository {
             .limit(perTokenLimit)
             .findAll();
         for (final photo in prefix) {
+          candidates[photo.mediaId] = photo;
+        }
+        final ocrPrefix = await _isar.photos
+            .where()
+            .ocrKeywordsElementStartsWith(token)
+            .limit(perTokenLimit)
+            .findAll();
+        final entityPrefix = await _isar.photos
+            .where()
+            .entityTokensElementStartsWith(token)
+            .limit(perTokenLimit)
+            .findAll();
+        for (final photo in [...ocrPrefix, ...entityPrefix]) {
           candidates[photo.mediaId] = photo;
         }
       }
