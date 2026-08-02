@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pinpic/services/document_expiry.dart';
 import 'package:pinpic/services/entity_extraction_service.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
 import 'package:pinpic/theme/app_colors.dart';
@@ -39,6 +40,9 @@ class SmartMemoryCard extends StatelessWidget {
         ? photo.cardBody!.split('\n')
         : entities.cardRows;
     final icon = _iconFor(photo.category, entities);
+    final expiry = DocumentExpiryStatus.fromDate(
+      photo.expiresAt ?? entities.expiresAt,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,8 +66,21 @@ class SmartMemoryCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (photo.isPinned)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Icon(
+                  Icons.push_pin_rounded,
+                  size: compact ? 14 : 16,
+                  color: AppColors.purple,
+                ),
+              ),
           ],
         ),
+        if (expiry != null) ...[
+          SizedBox(height: compact ? 6 : 8),
+          _ExpiryBadge(status: expiry, compact: compact),
+        ],
         if (rows.isNotEmpty) ...[
           SizedBox(height: compact ? 6 : 10),
           for (final row in rows.take(compact ? 3 : 5))
@@ -141,7 +158,9 @@ class SmartMemoryCard extends StatelessWidget {
                     final uri = Uri.tryParse(
                       raw.startsWith('http') ? raw : 'https://$raw',
                     );
-                    if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+                    if (uri != null) {
+                      launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
                   },
                 ),
               if (entities.docNumber != null)
@@ -195,6 +214,65 @@ class SmartMemoryCard extends StatelessWidget {
       default:
         return '📄';
     }
+  }
+}
+
+class _ExpiryBadge extends StatelessWidget {
+  const _ExpiryBadge({required this.status, required this.compact});
+
+  final DocumentExpiryStatus status;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final (Color dot, Color bg, Color fg) = switch (status.validity) {
+      DocumentValidity.valid => (
+        const Color(0xFF34C759),
+        const Color(0x1A34C759),
+        const Color(0xFF34C759),
+      ),
+      DocumentValidity.expiringSoon => (
+        const Color(0xFFFFCC00),
+        const Color(0x1AFFCC00),
+        const Color(0xFFE6B800),
+      ),
+      DocumentValidity.expired => (
+        const Color(0xFFFF3B30),
+        const Color(0x1AFF3B30),
+        const Color(0xFFFF6B63),
+      ),
+    };
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 4 : 6,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: compact ? 7 : 8,
+            height: compact ? 7 : 8,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status.label,
+            style: TextStyle(
+              fontSize: compact ? 11 : 12,
+              fontWeight: FontWeight.w700,
+              color: fg,
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

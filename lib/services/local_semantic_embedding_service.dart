@@ -22,14 +22,12 @@ class LocalSemanticEmbeddingService {
     required Iterable<String> visionTerms,
     required Iterable<String> categoryTerms,
     required bool hasQr,
-    required bool hasFace,
   }) {
     return _embed(<String, double>{
       for (final term in ocrTerms) term: 1.0,
       for (final term in visionTerms) term: 1.35,
       for (final term in categoryTerms) term: 1.2,
       if (hasQr) 'qr': 1.25,
-      if (hasFace) 'person': 1.25,
     });
   }
 

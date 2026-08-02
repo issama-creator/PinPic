@@ -65,6 +65,20 @@ class PhotoRepository {
         .findAll();
   }
 
+  Future<List<PhotoEntity>> getPinned({int offset = 0, int limit = 40}) {
+    return _isar.photos
+        .filter()
+        .isPinnedEqualTo(true)
+        .sortByDateTakenDesc()
+        .offset(offset)
+        .limit(limit)
+        .findAll();
+  }
+
+  Future<int> countPinned() {
+    return _isar.photos.filter().isPinnedEqualTo(true).count();
+  }
+
   Future<void> upsert(PhotoEntity photo) async {
     try {
       await _isar.writeTxn(() async {
@@ -75,6 +89,7 @@ class PhotoRepository {
         if (existing != null) {
           photo.id = existing.id;
           photo.isFavorite = existing.isFavorite;
+          photo.isPinned = existing.isPinned;
         }
         await _isar.photos.put(photo);
       });
@@ -99,6 +114,7 @@ class PhotoRepository {
           if (existing != null) {
             photo.id = existing.id;
             photo.isFavorite = existing.isFavorite;
+            photo.isPinned = existing.isPinned;
           }
         }
         await _isar.photos.putAll(photos);
@@ -119,6 +135,18 @@ class PhotoRepository {
           .findFirst();
       if (photo == null) return;
       photo.isFavorite = isFavorite;
+      await _isar.photos.put(photo);
+    });
+  }
+
+  Future<void> setPinned(String mediaId, bool isPinned) async {
+    await _isar.writeTxn(() async {
+      final photo = await _isar.photos
+          .filter()
+          .mediaIdEqualTo(mediaId)
+          .findFirst();
+      if (photo == null) return;
+      photo.isPinned = isPinned;
       await _isar.photos.put(photo);
     });
   }

@@ -266,7 +266,7 @@ void main() {
       expect(fromEnglish, containsAll(['человек', 'люди']));
     });
 
-    test('"девушка" bridges to face/people tokens for search', () {
+    test('"девушка" bridges to people tokens for search', () {
       final expanded = engine.expand({'девушка'});
       expect(
         expanded,
@@ -285,13 +285,12 @@ void main() {
         ocrText: null,
         objects: const [],
         category: 'Люди',
-        hasFace: true,
       );
       final queryTokens = engine.expand({'девушка'});
       expect(
         keywords.any(queryTokens.contains),
         isTrue,
-        reason: 'face-indexed photos must be findable by "девушка"',
+        reason: 'people-category photos must be findable by "девушка"',
       );
     });
 

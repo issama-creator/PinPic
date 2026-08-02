@@ -151,7 +151,6 @@ class CategoryEngine {
     required String? ocrText,
     required List<String> objects,
     required bool hasQr,
-    bool hasFace = false,
     String? displayName,
     String? mimeType,
   }) {
@@ -300,11 +299,6 @@ class CategoryEngine {
             _matches(blob, tokens, const ['screen', 'screenshot']))) {
       return screenshots;
     }
-
-    // A dedicated face detector (much more reliable than generic image
-    // labels for spotting people, especially in stylised/cropped photos)
-    // takes priority over the coarser object/label-based categories below.
-    if (hasFace) return people;
 
     if (_matches(visualBlob, visualTokens, const [
       'dog',

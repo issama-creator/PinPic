@@ -10,7 +10,6 @@ void main() {
       visionTerms: const ['golden retriever', 'dog'],
       categoryTerms: const ['Животные'],
       hasQr: false,
-      hasFace: false,
     );
     final dog = service.forQuery(const ['собака']);
     final ticket = service.forQuery(const ['билет']);

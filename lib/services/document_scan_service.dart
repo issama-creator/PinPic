@@ -98,7 +98,6 @@ class DocumentScanService {
       visionTerms: const ['document', 'paper'],
       categoryTerms: [if (category != null) category],
       hasQr: false,
-      hasFace: false,
     );
     final hash = HashUtils.photoFingerprint(
       mediaId: mediaId,

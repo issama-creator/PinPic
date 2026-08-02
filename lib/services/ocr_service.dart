@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image/image.dart' as img;
 import 'package:pinpic/services/deep_ocr_bridge.dart';
 
 /// Fast ML Kit Latin OCR + offline PP-OCRv5 Cyrillic deep pass on Android.
@@ -22,6 +25,9 @@ class OcrService {
   final TextRecognizer _recognizer;
   final DeepOcrBridge _deepOcr;
 
+  /// Long edge for the fast ML Kit pass — full 12MP frames are wasted work.
+  static const fastOcrMaxEdge = 1280;
+
   /// Legacy complete OCR API. Indexing uses the two explicit passes below so
   /// the quick index can become searchable before deep OCR finishes.
   Future<String?> extractText(String path) async {
@@ -36,8 +42,11 @@ class OcrService {
     final file = File(path);
     if (!await file.exists()) return null;
 
+    File? temp;
     try {
-      final input = InputImage.fromFilePath(path);
+      final inputPath = await _fastInputPath(path);
+      if (inputPath != path) temp = File(inputPath);
+      final input = InputImage.fromFilePath(inputPath);
       final result = await _recognizer.processImage(input);
       final text = result.text.trim();
       if (kDebugMode) {
@@ -49,6 +58,28 @@ class OcrService {
     } catch (error, stack) {
       debugPrint('OCR(mlkit) failed for $path: $error\n$stack');
       return null;
+    } finally {
+      if (temp != null) {
+        try {
+          await temp.delete();
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// Downscale large gallery photos before ML Kit; leave small files alone.
+  Future<String> _fastInputPath(String path) async {
+    try {
+      final bytes = await compute(_downscaleForFastOcr, path);
+      if (bytes == null) return path;
+      final temp = File(
+        '${Directory.systemTemp.path}'
+        '${Platform.pathSeparator}pinpic_ocr_${identityHashCode(path)}_${DateTime.now().microsecondsSinceEpoch}.jpg',
+      );
+      await temp.writeAsBytes(bytes, flush: true);
+      return temp.path;
+    } catch (_) {
+      return path;
     }
   }
 
@@ -175,4 +206,26 @@ class OcrService {
   }
 
   Future<void> dispose() => _recognizer.close();
+}
+
+/// Returns JPEG bytes when [path] is larger than [OcrService.fastOcrMaxEdge],
+/// otherwise null (caller should use the original file).
+Uint8List? _downscaleForFastOcr(String path) {
+  try {
+    final raw = File(path).readAsBytesSync();
+    final decoded = img.decodeImage(raw);
+    if (decoded == null) return null;
+    final maxEdge = math.max(decoded.width, decoded.height);
+    if (maxEdge <= OcrService.fastOcrMaxEdge) return null;
+    final scale = OcrService.fastOcrMaxEdge / maxEdge;
+    final resized = img.copyResize(
+      decoded,
+      width: math.max(1, (decoded.width * scale).round()),
+      height: math.max(1, (decoded.height * scale).round()),
+      interpolation: img.Interpolation.average,
+    );
+    return Uint8List.fromList(img.encodeJpg(resized, quality: 78));
+  } catch (_) {
+    return null;
+  }
 }

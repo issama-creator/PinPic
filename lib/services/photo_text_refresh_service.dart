@@ -72,7 +72,6 @@ class PhotoTextRefreshService {
         visionTerms: const [],
         categoryTerms: [if (category != null) category],
         hasQr: photo.hasQr,
-        hasFace: false,
       )
       ..indexedAt = DateTime.now();
     _summaries.applyToPhoto(photo, entities, fallbackTitle: category);

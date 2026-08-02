@@ -75,6 +75,10 @@ class PhotoEntity {
   @Index()
   bool isFavorite = false;
 
+  /// Important docs (passport, license, insurance…) stay pinned on home.
+  @Index()
+  bool isPinned = false;
+
   @Index()
   bool hasQr = false;
 
@@ -82,6 +86,10 @@ class PhotoEntity {
   bool hasFace = false;
 
   String? qrPayload;
+
+  /// Expiry / valid-until date extracted from OCR when present.
+  @Index()
+  DateTime? expiresAt;
 
   late DateTime indexedAt;
 
@@ -115,9 +123,11 @@ class PhotoEntity {
     this.album,
     this.mimeType,
     this.isFavorite = false,
+    this.isPinned = false,
     this.hasQr = false,
     this.hasFace = false,
     this.qrPayload,
+    this.expiresAt,
     this.modifiedAt,
   });
 }

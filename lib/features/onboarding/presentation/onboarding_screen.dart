@@ -325,7 +325,7 @@ class _OnboardingHeroText extends StatelessWidget {
                   shaderCallback: (bounds) =>
                       _OnboardingStyle.titleGradient.createShader(bounds),
                   child: Text(
-                    'фото?',
+                    'важное?',
                     style: titleStyle?.copyWith(color: Colors.white),
                   ),
                 ),
@@ -339,9 +339,11 @@ class _OnboardingHeroText extends StatelessWidget {
           TextSpan(
             style: subtitleStyle,
             children: [
-              const TextSpan(text: 'Просто опишите, что ищете —\n'),
+              const TextSpan(
+                text: 'Чек, пароль, билет, паспорт —\n',
+              ),
               ...PinPicMark.spans(subtitleStyle),
-              const TextSpan(text: ' найдёт это в вашей галерее.'),
+              const TextSpan(text: ' найдёт то, что вы когда‑то сфотографировали.'),
             ],
           ),
           textAlign: TextAlign.center,

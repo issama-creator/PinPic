@@ -11,6 +11,7 @@ import 'package:pinpic/services/thumbnail_cache_service.dart';
 import 'package:pinpic/services/vector_search_service.dart';
 import 'package:pinpic/shared/models/app_settings_entity.dart';
 import 'package:pinpic/shared/models/index_progress.dart';
+import 'package:pinpic/shared/models/photo_entity.dart';
 import 'package:pinpic/shared/repositories/photo_repository.dart';
 import 'package:pinpic/shared/repositories/search_history_repository.dart';
 import 'package:pinpic/shared/repositories/settings_repository.dart';
@@ -180,3 +181,9 @@ final favoritesProvider = FutureProvider.autoDispose((ref) async {
   await ref.watch(appBootstrapProvider.future);
   return ref.watch(photoRepositoryProvider).countFavorites();
 });
+
+final pinnedPhotosProvider =
+    FutureProvider.autoDispose<List<PhotoEntity>>((ref) async {
+      await ref.watch(appBootstrapProvider.future);
+      return ref.watch(photoRepositoryProvider).getPinned(limit: 24);
+    });

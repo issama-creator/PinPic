@@ -173,10 +173,14 @@ class IndexingService {
           }
 
           try {
-            final ocrFuture = _ocr.extractFastText(device.path);
-            final qrFuture = _qr.scan(device.path);
-            final ocrText = await ocrFuture;
-            final qr = await qrFuture;
+            final ocrText = await _ocr.extractFastText(device.path);
+            final qr = _shouldScanQr(
+              ocrText,
+              mimeType: device.mimeType,
+              displayName: device.displayName,
+            )
+                ? await _qr.scan(device.path)
+                : const QrScanResult(hasQr: false);
             const objects = <String>[];
             final category = _categories.classify(
               ocrText: ocrText,
@@ -210,7 +214,6 @@ class IndexingService {
               visionTerms: const [],
               categoryTerms: [if (category != null) category],
               hasQr: qr.hasQr,
-              hasFace: false,
             );
 
             final entity = PhotoEntity.create(
@@ -236,6 +239,7 @@ class IndexingService {
               album: device.album,
               mimeType: device.mimeType,
               isFavorite: existing?.isFavorite ?? false,
+              isPinned: existing?.isPinned ?? false,
               hasQr: qr.hasQr,
               hasFace: false,
               qrPayload: qr.payload,
@@ -293,6 +297,38 @@ class IndexingService {
           '${fastStopwatch.elapsedMilliseconds}ms; deep OCR queued: ${deepTasks.length}',
         );
       }
+
+      // Memory is searchable after the fast pass — mark ready before deep OCR.
+      final indexedAfterFast = await _photos.countAll();
+      final categoriesAfterFast = await _photos.distinctCategories();
+      if (!_stopRequested) {
+        await _settings.updateIndexStats(
+          totalPhotosFound: total,
+          totalIndexed: indexedAfterFast,
+          totalCategories: categoriesAfterFast.length,
+          initialScanCompleted: true,
+          indexedPipelineVersion: HashUtils.indexPipelineVersion,
+        );
+        _emit(
+          IndexProgress(
+            processed: total,
+            total: total,
+            isRunning: deepTasks.isNotEmpty,
+            isCompleted: deepTasks.isEmpty,
+            status: deepTasks.isEmpty
+                ? IndexingStatus.completed
+                : IndexingStatus.running,
+            stage: deepTasks.isEmpty ? IndexingStage.fast : IndexingStage.deep,
+            currentFileName: newlyIndexed > 0
+                ? 'Индексировано +$newlyIndexed'
+                : null,
+            errorMessage: failedPhotos > 0
+                ? 'Не удалось обработать файлов: $failedPhotos'
+                : null,
+          ),
+        );
+      }
+
       if (!_stopRequested && deepTasks.isNotEmpty) {
         ranDeepPass = true;
         final deepStopwatch = Stopwatch()..start();
@@ -359,8 +395,39 @@ class IndexingService {
     return terms.take(_maxIndexedSignalTerms).toList(growable: false);
   }
 
-  /// Deep OCR for documents / screenshots / QR / weak Latin fast OCR.
-  /// Ordinary empty photos stay on the fast path only.
+  /// QR scan is almost as expensive as OCR. Skip it when fast OCR already
+  /// captured a rich document, and only spend cycles when a code is likely.
+  bool _shouldScanQr(
+    String? ocrText, {
+    String? mimeType,
+    String? displayName,
+  }) {
+    final text = ocrText?.trim() ?? '';
+    final mime = mimeType?.toLowerCase() ?? '';
+    final name = (displayName ?? '').toLowerCase();
+
+    if (text.isEmpty) return true;
+    if (mime.contains('png')) return true;
+    if (name.contains('screenshot') || name.contains('снимок')) return true;
+
+    final lower = text.toLowerCase();
+    if (RegExp(
+      r'билет|boarding|ticket|qr|wifi|wi-fi|passbook|посадоч',
+      caseSensitive: false,
+    ).hasMatch(lower)) {
+      return true;
+    }
+
+    final digits = RegExp(r'\d').allMatches(text).length;
+    // Rich receipt / contract OCR — QR rarely adds search value.
+    if (text.length >= 100 && digits >= 6) return false;
+    if (text.length >= 160) return false;
+    // Thin OCR: a QR might be the only useful signal.
+    return text.length < 48;
+  }
+
+  /// Deep OCR only for documents / screenshots / QR / document-looking text.
+  /// Ordinary scenic photos with random ML Kit noise stay on the fast path.
   bool _shouldRunDeepOcr(
     String? fastText, {
     String? category,
@@ -372,12 +439,25 @@ class IndexingService {
     }
     if (hasQr) return true;
     final mime = mimeType?.toLowerCase() ?? '';
-    if (mime.contains('png')) {
-      return _ocr.needsDeepText(fastText);
+    if (mime.contains('png') && _ocr.needsDeepText(fastText)) {
+      return true;
     }
     final fast = fastText?.trim() ?? '';
     if (fast.isEmpty) return false;
-    return _ocr.needsDeepText(fast);
+    if (_looksDocumentish(fast)) return true;
+    return false;
+  }
+
+  bool _looksDocumentish(String text) {
+    final digits = RegExp(r'\d').allMatches(text).length;
+    if (digits >= 8) return true;
+    final lower = text.toLowerCase();
+    return RegExp(
+      r'₽|руб|rub|total|sum|итого|сумма|договор|гарант|паспорт|'
+      r'passport|ticket|boarding|invoice|receipt|warranty|prescription|'
+      r'wifi|password|login|билет|чек|визит|страхов',
+      caseSensitive: false,
+    ).hasMatch(lower);
   }
 
   Future<void> _runDeepOcrPass(List<_DeepOcrTask> tasks) async {
@@ -386,10 +466,10 @@ class IndexingService {
         processed: 0,
         total: tasks.length,
         isRunning: true,
-        isCompleted: false,
+        isCompleted: true,
         status: IndexingStatus.running,
         stage: IndexingStage.deep,
-        currentFileName: 'Читаем текст на фото',
+        currentFileName: 'Уточняем текст',
       ),
     );
 
@@ -443,7 +523,6 @@ class IndexingService {
                 visionTerms: const [],
                 categoryTerms: [if (category != null) category],
                 hasQr: existing.hasQr,
-                hasFace: false,
               )
               ..indexedAt = DateTime.now();
             _summaries.applyToPhoto(

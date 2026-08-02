@@ -11,6 +11,7 @@ import 'package:pinpic/core/utils/hash_utils.dart';
 import 'package:pinpic/features/settings/presentation/settings_screen.dart';
 import 'package:pinpic/routes/route_paths.dart';
 import 'package:pinpic/services/category_engine.dart';
+import 'package:pinpic/services/document_expiry.dart';
 import 'package:pinpic/shared/models/app_settings_entity.dart';
 import 'package:pinpic/shared/models/index_progress.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
@@ -206,8 +207,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     onOpenResults: _openResults,
                     onOpenCategory: _openCategory,
                     onOpenFilters: () => context.push(RoutePaths.filters),
-                    onScanDocument: () =>
-                        context.push(RoutePaths.scanDocument),
+                    onOpenPhoto: (mediaId) =>
+                        context.push(RoutePaths.photoDetailsPath(mediaId)),
                   ),
                   _FavoritesTab(
                     onOpenPhoto: (mediaId) =>
@@ -234,14 +235,14 @@ class _SearchTab extends ConsumerStatefulWidget {
     required this.onOpenResults,
     required this.onOpenCategory,
     required this.onOpenFilters,
-    required this.onScanDocument,
+    required this.onOpenPhoto,
   });
 
   final List<_QuickCategory> categories;
   final ValueChanged<String> onOpenResults;
   final ValueChanged<String> onOpenCategory;
   final VoidCallback onOpenFilters;
-  final VoidCallback onScanDocument;
+  final ValueChanged<String> onOpenPhoto;
 
   @override
   ConsumerState<_SearchTab> createState() => _SearchTabState();
@@ -291,6 +292,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
     final recentAsync = ref.watch(recentSearchesProvider);
     final statsAsync = ref.watch(photoStatsProvider);
     final countsAsync = ref.watch(categoryCountsProvider);
+    final pinnedAsync = ref.watch(pinnedPhotosProvider);
     final settingsAsync = ref.watch(appSettingsProvider);
     final progress = ref.watch(indexProgressProvider);
     final formatter = NumberFormat.decimalPattern('ru');
@@ -316,22 +318,6 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
             ),
           ),
         ),
-        if (!typing)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: OutlinedButton.icon(
-                onPressed: widget.onScanDocument,
-                icon: const Icon(Icons.document_scanner_outlined),
-                label: const Text('Сканировать важное'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: style.text,
-                  side: BorderSide(color: style.border),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-            ),
-          ),
         if (typing && _hot.isNotEmpty)
           SliverToBoxAdapter(
             child: Padding(
@@ -373,6 +359,54 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
             ),
           ),
         if (!typing) ...[
+          pinnedAsync.when(
+            data: (pinned) {
+              if (pinned.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Закреплённые',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: style.text,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 108,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: pinned.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 10),
+                          itemBuilder: (context, index) {
+                            final photo = pinned[index];
+                            return _PinnedTile(
+                              photo: photo,
+                              onTap: () =>
+                                  widget.onOpenPhoto(photo.mediaId),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            loading: () =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
@@ -472,7 +506,9 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                       onOpen: () => context.go(RoutePaths.permission),
                     );
                   }
-                  final liveFraction = progress.total > 0
+                  final liveFraction = progress.stage == IndexingStage.deep
+                      ? 1.0
+                      : progress.total > 0
                       ? progress.fraction
                       : (stats.photos <= 0
                             ? 0.0
@@ -735,6 +771,111 @@ int _collectionCount(String label, Map<String, int> counts) {
   return counts[label] ?? 0;
 }
 
+class _PinnedTile extends StatelessWidget {
+  const _PinnedTile({required this.photo, required this.onTap});
+
+  final PhotoEntity photo;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _HomeStyle.of(context);
+    final title =
+        photo.cardTitle?.trim().isNotEmpty == true
+        ? photo.cardTitle!
+        : (photo.category ?? photo.displayName ?? 'Документ');
+    final expiry = DocumentExpiryStatus.fromDate(photo.expiresAt);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          width: 168,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: style.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: style.border),
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 56,
+                  height: 72,
+                  child: PhotoThumbnail(
+                    mediaId: photo.mediaId,
+                    filePath: photo.path,
+                    width: 120,
+                    height: 160,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.push_pin_rounded,
+                          size: 12,
+                          color: style.accent,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: style.text,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (expiry != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '${_expiryDot(expiry.validity)} ${expiry.label}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: style.muted,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _expiryDot(DocumentValidity validity) {
+    return switch (validity) {
+      DocumentValidity.valid => '🟢',
+      DocumentValidity.expiringSoon => '🟡',
+      DocumentValidity.expired => '🔴',
+    };
+  }
+}
+
 class _CategoryTile extends StatelessWidget {
   const _CategoryTile({
     required this.item,
@@ -818,17 +959,11 @@ class _MemoryStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = _HomeStyle.of(context);
-    final ready = status == IndexingStatus.completed ||
-        (status == IndexingStatus.idle && progress >= 1);
-    final busy = status == IndexingStatus.running || isRunning;
-    final needsAction =
-        status == IndexingStatus.failed || status == IndexingStatus.paused;
-
     final headline = switch (status) {
       IndexingStatus.running =>
         stage == IndexingStage.fast
             ? 'Запоминаем галерею'
-            : 'Читаем текст на фото',
+            : 'Память готова',
       IndexingStatus.paused => 'Память на паузе',
       IndexingStatus.failed => 'Не удалось обновить память',
       IndexingStatus.completed => 'Память готова',
@@ -837,7 +972,10 @@ class _MemoryStatusCard extends StatelessWidget {
     };
 
     final subtitle = switch (status) {
-      IndexingStatus.running => 'Поиск уже можно пробовать',
+      IndexingStatus.running =>
+        stage == IndexingStage.fast
+            ? 'Поиск уже можно пробовать'
+            : 'Уточняем текст в фоне',
       IndexingStatus.paused => 'Продолжите, когда удобно',
       IndexingStatus.failed => errorMessage ?? 'Нажмите, чтобы повторить',
       IndexingStatus.completed => 'Спросите то, что помните',
@@ -846,6 +984,13 @@ class _MemoryStatusCard extends StatelessWidget {
             ? 'Откройте доступ и начните'
             : 'Спросите то, что помните',
     };
+
+    final ready = status == IndexingStatus.completed ||
+        (status == IndexingStatus.idle && progress >= 1) ||
+        (status == IndexingStatus.running && stage == IndexingStage.deep);
+    final busy = status == IndexingStatus.running || isRunning;
+    final needsAction =
+        status == IndexingStatus.failed || status == IndexingStatus.paused;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),

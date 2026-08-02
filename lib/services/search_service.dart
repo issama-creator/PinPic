@@ -323,6 +323,10 @@ class SearchService {
       );
     }
     hits.sort((a, b) {
+      final byPin = (b.photo.isPinned ? 1 : 0).compareTo(
+        a.photo.isPinned ? 1 : 0,
+      );
+      if (byPin != 0) return byPin;
       final byScore = b.score.compareTo(a.score);
       if (byScore != 0) return byScore;
       final aDate = a.photo.dateTaken ?? DateTime.fromMillisecondsSinceEpoch(0);

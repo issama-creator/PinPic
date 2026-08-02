@@ -76,21 +76,43 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
           photoAsync.maybeWhen(
             data: (photo) {
               if (photo == null) return const SizedBox.shrink();
-              return IconButton(
-                onPressed: () async {
-                  await ref
-                      .read(photoRepositoryProvider)
-                      .setFavorite(widget.mediaId, !photo.isFavorite);
-                  ref.invalidate(_photoByIdProvider(widget.mediaId));
-                  ref.invalidate(favoritesProvider);
-                  ref.read(searchServiceProvider).invalidateCaches();
-                },
-                icon: Icon(
-                  photo.isFavorite
-                      ? Icons.star_rounded
-                      : Icons.star_outline_rounded,
-                  color: photo.isFavorite ? AppColors.purple : null,
-                ),
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: photo.isPinned ? 'Открепить' : 'Закрепить',
+                    onPressed: () async {
+                      await ref
+                          .read(photoRepositoryProvider)
+                          .setPinned(widget.mediaId, !photo.isPinned);
+                      ref.invalidate(_photoByIdProvider(widget.mediaId));
+                      ref.invalidate(pinnedPhotosProvider);
+                      ref.read(searchServiceProvider).invalidateCaches();
+                    },
+                    icon: Icon(
+                      photo.isPinned
+                          ? Icons.push_pin_rounded
+                          : Icons.push_pin_outlined,
+                      color: photo.isPinned ? AppColors.purple : null,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      await ref
+                          .read(photoRepositoryProvider)
+                          .setFavorite(widget.mediaId, !photo.isFavorite);
+                      ref.invalidate(_photoByIdProvider(widget.mediaId));
+                      ref.invalidate(favoritesProvider);
+                      ref.read(searchServiceProvider).invalidateCaches();
+                    },
+                    icon: Icon(
+                      photo.isFavorite
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: photo.isFavorite ? AppColors.purple : null,
+                    ),
+                  ),
+                ],
               );
             },
             orElse: () => const SizedBox.shrink(),
@@ -227,6 +249,30 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
                 Row(
                   children: [
                     Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () async {
+                          final next = !photo.isPinned;
+                          await ref
+                              .read(photoRepositoryProvider)
+                              .setPinned(widget.mediaId, next);
+                          ref.invalidate(
+                            _photoByIdProvider(widget.mediaId),
+                          );
+                          ref.invalidate(pinnedPhotosProvider);
+                          ref.read(searchServiceProvider).invalidateCaches();
+                        },
+                        icon: Icon(
+                          photo.isPinned
+                              ? Icons.push_pin_rounded
+                              : Icons.push_pin_outlined,
+                        ),
+                        label: Text(
+                          photo.isPinned ? 'Закреплено' : 'Закрепить',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () async {
                           final file = File(photo.path);
@@ -247,31 +293,27 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
                         label: const Text('Поделиться'),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final next = !photo.isFavorite;
-                          await ref
-                              .read(photoRepositoryProvider)
-                              .setFavorite(widget.mediaId, next);
-                          ref.invalidate(
-                            _photoByIdProvider(widget.mediaId),
-                          );
-                          ref.invalidate(favoritesProvider);
-                          ref.read(searchServiceProvider).invalidateCaches();
-                        },
-                        icon: Icon(
-                          photo.isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                        ),
-                        label: Text(
-                          photo.isFavorite ? 'В избранном' : 'В избранное',
-                        ),
-                      ),
-                    ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final next = !photo.isFavorite;
+                    await ref
+                        .read(photoRepositoryProvider)
+                        .setFavorite(widget.mediaId, next);
+                    ref.invalidate(_photoByIdProvider(widget.mediaId));
+                    ref.invalidate(favoritesProvider);
+                    ref.read(searchServiceProvider).invalidateCaches();
+                  },
+                  icon: Icon(
+                    photo.isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                  ),
+                  label: Text(
+                    photo.isFavorite ? 'В избранном' : 'В избранное',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -327,6 +369,7 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
                               .invalidate(widget.mediaId);
                           ref.read(searchServiceProvider).invalidateCaches();
                           ref.invalidate(favoritesProvider);
+                          ref.invalidate(pinnedPhotosProvider);
                           ref.invalidate(photoStatsProvider);
                           if (!context.mounted) return;
                           context.pop();

@@ -87,7 +87,6 @@ class KeywordEngine {
     String? album,
     String? qrPayload,
     bool hasQr = false,
-    bool hasFace = false,
   }) {
     final tokens = <String>{};
 
@@ -104,14 +103,6 @@ class KeywordEngine {
     if (hasQr) {
       tokens.add('qr');
       tokens.add('qr-код');
-    }
-    if (hasFace) {
-      tokens.add('человек');
-      tokens.add('люди');
-      tokens.add('лицо');
-      tokens.add('person');
-      tokens.add('people');
-      tokens.add('face');
     }
     if (category != null && category.isNotEmpty) {
       tokens.add(category.toLowerCase());

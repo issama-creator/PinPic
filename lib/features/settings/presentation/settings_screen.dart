@@ -107,15 +107,15 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.refresh_rounded),
                 title: const Text('Переиндексировать всё'),
-                subtitle: const Text('Заново распознает теги и категории'),
+                subtitle: const Text('Заново прочитает текст и документы'),
                 onTap: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Переиндексировать все фото?'),
                       content: const Text(
-                        'Это заново распознает текст, объекты и категории '
-                        'для всех фото. Может занять некоторое время.',
+                        'PinPic заново прочитает текст на фото и обновит '
+                        'категории документов. Может занять некоторое время.',
                       ),
                       actions: [
                         TextButton(

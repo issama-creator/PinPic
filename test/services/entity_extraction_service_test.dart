@@ -42,4 +42,22 @@ void main() {
     expect(entities.wifiPassword, 'HomeNet_42');
     expect(entities.searchTokens, contains('homenet_42'));
   });
+
+  test('extracts passport expiry date', () {
+    final entities = extractor.extract(
+      ocrText:
+          'ПАСПОРТ\nSurname IVANOV\nДействителен до 15.03.2027\nДата рождения 01.01.1990',
+      category: CategoryEngine.passports,
+    );
+    expect(entities.expiresAt, DateTime(2027, 3, 15));
+    expect(entities.title, 'Паспорт');
+  });
+
+  test('ignores plain dates without expiry cue', () {
+    final entities = extractor.extract(
+      ocrText: 'IKEA\nTotal 990 ₽\n15.07.2026',
+      category: CategoryEngine.receipts,
+    );
+    expect(entities.expiresAt, isNull);
+  });
 }

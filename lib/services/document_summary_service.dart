@@ -47,5 +47,6 @@ class DocumentSummaryService {
     photo.cardBody =
         entities.cardRows.isEmpty ? null : entities.cardRows.join('\n');
     photo.entityTokens = entities.searchTokens.take(48).toList(growable: false);
+    photo.expiresAt = entities.expiresAt;
   }
 }

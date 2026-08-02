@@ -48,80 +48,86 @@ const PhotoEntitySchema = CollectionSchema(
       name: r'entityTokens',
       type: IsarType.stringList,
     ),
-    r'hasFace': PropertySchema(id: 7, name: r'hasFace', type: IsarType.bool),
-    r'hasQr': PropertySchema(id: 8, name: r'hasQr', type: IsarType.bool),
-    r'hash': PropertySchema(id: 9, name: r'hash', type: IsarType.string),
-    r'height': PropertySchema(id: 10, name: r'height', type: IsarType.long),
+    r'expiresAt': PropertySchema(
+      id: 7,
+      name: r'expiresAt',
+      type: IsarType.dateTime,
+    ),
+    r'hasFace': PropertySchema(id: 8, name: r'hasFace', type: IsarType.bool),
+    r'hasQr': PropertySchema(id: 9, name: r'hasQr', type: IsarType.bool),
+    r'hash': PropertySchema(id: 10, name: r'hash', type: IsarType.string),
+    r'height': PropertySchema(id: 11, name: r'height', type: IsarType.long),
     r'indexedAt': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'indexedAt',
       type: IsarType.dateTime,
     ),
     r'isFavorite': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'isFavorite',
       type: IsarType.bool,
     ),
+    r'isPinned': PropertySchema(id: 14, name: r'isPinned', type: IsarType.bool),
     r'keywords': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'keywords',
       type: IsarType.stringList,
     ),
     r'latitude': PropertySchema(
-      id: 14,
+      id: 16,
       name: r'latitude',
       type: IsarType.double,
     ),
     r'longitude': PropertySchema(
-      id: 15,
+      id: 17,
       name: r'longitude',
       type: IsarType.double,
     ),
-    r'mediaId': PropertySchema(id: 16, name: r'mediaId', type: IsarType.string),
+    r'mediaId': PropertySchema(id: 18, name: r'mediaId', type: IsarType.string),
     r'mimeType': PropertySchema(
-      id: 17,
+      id: 19,
       name: r'mimeType',
       type: IsarType.string,
     ),
     r'modifiedAt': PropertySchema(
-      id: 18,
+      id: 20,
       name: r'modifiedAt',
       type: IsarType.dateTime,
     ),
     r'objects': PropertySchema(
-      id: 19,
+      id: 21,
       name: r'objects',
       type: IsarType.stringList,
     ),
     r'ocrKeywords': PropertySchema(
-      id: 20,
+      id: 22,
       name: r'ocrKeywords',
       type: IsarType.stringList,
     ),
-    r'ocrText': PropertySchema(id: 21, name: r'ocrText', type: IsarType.string),
-    r'path': PropertySchema(id: 22, name: r'path', type: IsarType.string),
+    r'ocrText': PropertySchema(id: 23, name: r'ocrText', type: IsarType.string),
+    r'path': PropertySchema(id: 24, name: r'path', type: IsarType.string),
     r'qrPayload': PropertySchema(
-      id: 23,
+      id: 25,
       name: r'qrPayload',
       type: IsarType.string,
     ),
     r'semanticEmbedding': PropertySchema(
-      id: 24,
+      id: 26,
       name: r'semanticEmbedding',
       type: IsarType.doubleList,
     ),
     r'sizeBytes': PropertySchema(
-      id: 25,
+      id: 27,
       name: r'sizeBytes',
       type: IsarType.long,
     ),
-    r'summary': PropertySchema(id: 26, name: r'summary', type: IsarType.string),
+    r'summary': PropertySchema(id: 28, name: r'summary', type: IsarType.string),
     r'visionKeywords': PropertySchema(
-      id: 27,
+      id: 29,
       name: r'visionKeywords',
       type: IsarType.stringList,
     ),
-    r'width': PropertySchema(id: 28, name: r'width', type: IsarType.long),
+    r'width': PropertySchema(id: 30, name: r'width', type: IsarType.long),
   },
 
   estimateSize: _photoEntityEstimateSize,
@@ -273,6 +279,19 @@ const PhotoEntitySchema = CollectionSchema(
         ),
       ],
     ),
+    r'isPinned': IndexSchema(
+      id: 7607338673446676027,
+      name: r'isPinned',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'isPinned',
+          type: IndexType.value,
+          caseSensitive: false,
+        ),
+      ],
+    ),
     r'hasQr': IndexSchema(
       id: 2520744088735484928,
       name: r'hasQr',
@@ -294,6 +313,19 @@ const PhotoEntitySchema = CollectionSchema(
       properties: [
         IndexPropertySchema(
           name: r'hasFace',
+          type: IndexType.value,
+          caseSensitive: false,
+        ),
+      ],
+    ),
+    r'expiresAt': IndexSchema(
+      id: 4994901953235663716,
+      name: r'expiresAt',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'expiresAt',
           type: IndexType.value,
           caseSensitive: false,
         ),
@@ -424,28 +456,30 @@ void _photoEntitySerialize(
   writer.writeDateTime(offsets[4], object.dateTaken);
   writer.writeString(offsets[5], object.displayName);
   writer.writeStringList(offsets[6], object.entityTokens);
-  writer.writeBool(offsets[7], object.hasFace);
-  writer.writeBool(offsets[8], object.hasQr);
-  writer.writeString(offsets[9], object.hash);
-  writer.writeLong(offsets[10], object.height);
-  writer.writeDateTime(offsets[11], object.indexedAt);
-  writer.writeBool(offsets[12], object.isFavorite);
-  writer.writeStringList(offsets[13], object.keywords);
-  writer.writeDouble(offsets[14], object.latitude);
-  writer.writeDouble(offsets[15], object.longitude);
-  writer.writeString(offsets[16], object.mediaId);
-  writer.writeString(offsets[17], object.mimeType);
-  writer.writeDateTime(offsets[18], object.modifiedAt);
-  writer.writeStringList(offsets[19], object.objects);
-  writer.writeStringList(offsets[20], object.ocrKeywords);
-  writer.writeString(offsets[21], object.ocrText);
-  writer.writeString(offsets[22], object.path);
-  writer.writeString(offsets[23], object.qrPayload);
-  writer.writeDoubleList(offsets[24], object.semanticEmbedding);
-  writer.writeLong(offsets[25], object.sizeBytes);
-  writer.writeString(offsets[26], object.summary);
-  writer.writeStringList(offsets[27], object.visionKeywords);
-  writer.writeLong(offsets[28], object.width);
+  writer.writeDateTime(offsets[7], object.expiresAt);
+  writer.writeBool(offsets[8], object.hasFace);
+  writer.writeBool(offsets[9], object.hasQr);
+  writer.writeString(offsets[10], object.hash);
+  writer.writeLong(offsets[11], object.height);
+  writer.writeDateTime(offsets[12], object.indexedAt);
+  writer.writeBool(offsets[13], object.isFavorite);
+  writer.writeBool(offsets[14], object.isPinned);
+  writer.writeStringList(offsets[15], object.keywords);
+  writer.writeDouble(offsets[16], object.latitude);
+  writer.writeDouble(offsets[17], object.longitude);
+  writer.writeString(offsets[18], object.mediaId);
+  writer.writeString(offsets[19], object.mimeType);
+  writer.writeDateTime(offsets[20], object.modifiedAt);
+  writer.writeStringList(offsets[21], object.objects);
+  writer.writeStringList(offsets[22], object.ocrKeywords);
+  writer.writeString(offsets[23], object.ocrText);
+  writer.writeString(offsets[24], object.path);
+  writer.writeString(offsets[25], object.qrPayload);
+  writer.writeDoubleList(offsets[26], object.semanticEmbedding);
+  writer.writeLong(offsets[27], object.sizeBytes);
+  writer.writeString(offsets[28], object.summary);
+  writer.writeStringList(offsets[29], object.visionKeywords);
+  writer.writeLong(offsets[30], object.width);
 }
 
 PhotoEntity _photoEntityDeserialize(
@@ -462,29 +496,31 @@ PhotoEntity _photoEntityDeserialize(
   object.dateTaken = reader.readDateTimeOrNull(offsets[4]);
   object.displayName = reader.readStringOrNull(offsets[5]);
   object.entityTokens = reader.readStringList(offsets[6]) ?? [];
-  object.hasFace = reader.readBool(offsets[7]);
-  object.hasQr = reader.readBool(offsets[8]);
-  object.hash = reader.readString(offsets[9]);
-  object.height = reader.readLong(offsets[10]);
+  object.expiresAt = reader.readDateTimeOrNull(offsets[7]);
+  object.hasFace = reader.readBool(offsets[8]);
+  object.hasQr = reader.readBool(offsets[9]);
+  object.hash = reader.readString(offsets[10]);
+  object.height = reader.readLong(offsets[11]);
   object.id = id;
-  object.indexedAt = reader.readDateTime(offsets[11]);
-  object.isFavorite = reader.readBool(offsets[12]);
-  object.keywords = reader.readStringList(offsets[13]) ?? [];
-  object.latitude = reader.readDoubleOrNull(offsets[14]);
-  object.longitude = reader.readDoubleOrNull(offsets[15]);
-  object.mediaId = reader.readString(offsets[16]);
-  object.mimeType = reader.readStringOrNull(offsets[17]);
-  object.modifiedAt = reader.readDateTimeOrNull(offsets[18]);
-  object.objects = reader.readStringList(offsets[19]) ?? [];
-  object.ocrKeywords = reader.readStringList(offsets[20]) ?? [];
-  object.ocrText = reader.readStringOrNull(offsets[21]);
-  object.path = reader.readString(offsets[22]);
-  object.qrPayload = reader.readStringOrNull(offsets[23]);
-  object.semanticEmbedding = reader.readDoubleList(offsets[24]) ?? [];
-  object.sizeBytes = reader.readLong(offsets[25]);
-  object.summary = reader.readStringOrNull(offsets[26]);
-  object.visionKeywords = reader.readStringList(offsets[27]) ?? [];
-  object.width = reader.readLong(offsets[28]);
+  object.indexedAt = reader.readDateTime(offsets[12]);
+  object.isFavorite = reader.readBool(offsets[13]);
+  object.isPinned = reader.readBool(offsets[14]);
+  object.keywords = reader.readStringList(offsets[15]) ?? [];
+  object.latitude = reader.readDoubleOrNull(offsets[16]);
+  object.longitude = reader.readDoubleOrNull(offsets[17]);
+  object.mediaId = reader.readString(offsets[18]);
+  object.mimeType = reader.readStringOrNull(offsets[19]);
+  object.modifiedAt = reader.readDateTimeOrNull(offsets[20]);
+  object.objects = reader.readStringList(offsets[21]) ?? [];
+  object.ocrKeywords = reader.readStringList(offsets[22]) ?? [];
+  object.ocrText = reader.readStringOrNull(offsets[23]);
+  object.path = reader.readString(offsets[24]);
+  object.qrPayload = reader.readStringOrNull(offsets[25]);
+  object.semanticEmbedding = reader.readDoubleList(offsets[26]) ?? [];
+  object.sizeBytes = reader.readLong(offsets[27]);
+  object.summary = reader.readStringOrNull(offsets[28]);
+  object.visionKeywords = reader.readStringList(offsets[29]) ?? [];
+  object.width = reader.readLong(offsets[30]);
   return object;
 }
 
@@ -510,48 +546,52 @@ P _photoEntityDeserializeProp<P>(
     case 6:
       return (reader.readStringList(offset) ?? []) as P;
     case 7:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
       return (reader.readBool(offset)) as P;
     case 9:
-      return (reader.readString(offset)) as P;
-    case 10:
-      return (reader.readLong(offset)) as P;
-    case 11:
-      return (reader.readDateTime(offset)) as P;
-    case 12:
       return (reader.readBool(offset)) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readLong(offset)) as P;
+    case 12:
+      return (reader.readDateTime(offset)) as P;
     case 13:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 14:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 15:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 16:
-      return (reader.readString(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 17:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 18:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 19:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 20:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 21:
-      return (reader.readStringOrNull(offset)) as P;
-    case 22:
       return (reader.readString(offset)) as P;
+    case 19:
+      return (reader.readStringOrNull(offset)) as P;
+    case 20:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 21:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 22:
+      return (reader.readStringList(offset) ?? []) as P;
     case 23:
       return (reader.readStringOrNull(offset)) as P;
     case 24:
-      return (reader.readDoubleList(offset) ?? []) as P;
+      return (reader.readString(offset)) as P;
     case 25:
-      return (reader.readLong(offset)) as P;
-    case 26:
       return (reader.readStringOrNull(offset)) as P;
+    case 26:
+      return (reader.readDoubleList(offset) ?? []) as P;
     case 27:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readLong(offset)) as P;
     case 28:
+      return (reader.readStringOrNull(offset)) as P;
+    case 29:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 30:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -751,6 +791,14 @@ extension PhotoEntityQueryWhereSort
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyIsPinned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'isPinned'),
+      );
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyHasQr() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
@@ -763,6 +811,14 @@ extension PhotoEntityQueryWhereSort
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'hasFace'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyExpiresAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'expiresAt'),
       );
     });
   }
@@ -2044,6 +2100,60 @@ extension PhotoEntityQueryWhere
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> isPinnedEqualTo(
+    bool isPinned,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'isPinned', value: [isPinned]),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> isPinnedNotEqualTo(
+    bool isPinned,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isPinned',
+                lower: [],
+                upper: [isPinned],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isPinned',
+                lower: [isPinned],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isPinned',
+                lower: [isPinned],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isPinned',
+                lower: [],
+                upper: [isPinned],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> hasQrEqualTo(
     bool hasQr,
   ) {
@@ -2149,6 +2259,131 @@ extension PhotoEntityQueryWhere
               ),
             );
       }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> expiresAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'expiresAt', value: [null]),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  expiresAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'expiresAt',
+          lower: [null],
+          includeLower: false,
+          upper: [],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> expiresAtEqualTo(
+    DateTime? expiresAt,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'expiresAt', value: [expiresAt]),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> expiresAtNotEqualTo(
+    DateTime? expiresAt,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'expiresAt',
+                lower: [],
+                upper: [expiresAt],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'expiresAt',
+                lower: [expiresAt],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'expiresAt',
+                lower: [expiresAt],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'expiresAt',
+                lower: [],
+                upper: [expiresAt],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  expiresAtGreaterThan(DateTime? expiresAt, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'expiresAt',
+          lower: [expiresAt],
+          includeLower: include,
+          upper: [],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> expiresAtLessThan(
+    DateTime? expiresAt, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'expiresAt',
+          lower: [],
+          upper: [expiresAt],
+          includeUpper: include,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> expiresAtBetween(
+    DateTime? lowerExpiresAt,
+    DateTime? upperExpiresAt, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'expiresAt',
+          lower: [lowerExpiresAt],
+          includeLower: includeLower,
+          upper: [upperExpiresAt],
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -3229,6 +3464,79 @@ extension PhotoEntityQueryFilter
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  expiresAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'expiresAt'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  expiresAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'expiresAt'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  expiresAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'expiresAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  expiresAtGreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'expiresAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  expiresAtLessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'expiresAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  expiresAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'expiresAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> hasFaceEqualTo(
     bool value,
   ) {
@@ -3572,6 +3880,16 @@ extension PhotoEntityQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(property: r'isFavorite', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition> isPinnedEqualTo(
+    bool value,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'isPinned', value: value),
       );
     });
   }
@@ -5887,6 +6205,18 @@ extension PhotoEntityQuerySortBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByExpiresAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'expiresAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByExpiresAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'expiresAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByHasFace() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hasFace', Sort.asc);
@@ -5956,6 +6286,18 @@ extension PhotoEntityQuerySortBy
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByIsFavoriteDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isFavorite', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByIsPinned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinned', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByIsPinnedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinned', Sort.desc);
     });
   }
 
@@ -6166,6 +6508,18 @@ extension PhotoEntityQuerySortThenBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByExpiresAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'expiresAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByExpiresAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'expiresAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByHasFace() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hasFace', Sort.asc);
@@ -6247,6 +6601,18 @@ extension PhotoEntityQuerySortThenBy
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByIsFavoriteDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isFavorite', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByIsPinned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinned', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByIsPinnedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPinned', Sort.desc);
     });
   }
 
@@ -6437,6 +6803,12 @@ extension PhotoEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByExpiresAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'expiresAt');
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByHasFace() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'hasFace');
@@ -6472,6 +6844,12 @@ extension PhotoEntityQueryWhereDistinct
   QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByIsFavorite() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isFavorite');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByIsPinned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isPinned');
     });
   }
 
@@ -6636,6 +7014,12 @@ extension PhotoEntityQueryProperty
     });
   }
 
+  QueryBuilder<PhotoEntity, DateTime?, QQueryOperations> expiresAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'expiresAt');
+    });
+  }
+
   QueryBuilder<PhotoEntity, bool, QQueryOperations> hasFaceProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'hasFace');
@@ -6669,6 +7053,12 @@ extension PhotoEntityQueryProperty
   QueryBuilder<PhotoEntity, bool, QQueryOperations> isFavoriteProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isFavorite');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, bool, QQueryOperations> isPinnedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isPinned');
     });
   }
 

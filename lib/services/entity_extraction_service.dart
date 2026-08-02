@@ -6,6 +6,7 @@ class ExtractedEntities {
     this.amount,
     this.amountDigits,
     this.date,
+    this.expiresAt,
     this.docNumber,
     this.phone,
     this.email,
@@ -22,6 +23,8 @@ class ExtractedEntities {
   final String? amount;
   final String? amountDigits;
   final String? date;
+  /// Parsed valid-until / expiry date when OCR has an explicit cue.
+  final DateTime? expiresAt;
   final String? docNumber;
   final String? phone;
   final String? email;
@@ -37,6 +40,7 @@ class ExtractedEntities {
       title == null &&
       amount == null &&
       date == null &&
+      expiresAt == null &&
       docNumber == null &&
       phone == null &&
       email == null &&
@@ -176,6 +180,7 @@ class EntityExtractionService {
       amount: amountMatch?.display,
       amountDigits: amountMatch?.digits,
       date: _date(text) ?? _formatDate(dateTaken),
+      expiresAt: _expiresAt(text),
       docNumber: _docNumber(text),
       phone: phone,
       email: email,
@@ -220,6 +225,9 @@ class EntityExtractionService {
       return 'Рецепт';
     }
     if (lower.contains('водительск') || lower.contains('driver')) return 'Права';
+    if (lower.contains('страхов') || lower.contains('insurance')) {
+      return 'Страховка';
+    }
     if (lower.contains('визит') || lower.contains('business card')) {
       return 'Визитка';
     }
@@ -352,6 +360,49 @@ class EntityExtractionService {
       r'\b(\d{1,2}[./]\d{1,2}[./]\d{2,4})\b',
     ).firstMatch(text);
     return match?.group(1);
+  }
+
+  /// Prefer dates next to expiry / valid-until cues — not birth dates.
+  DateTime? _expiresAt(String text) {
+    final cue = RegExp(
+      r'(?:действител(?:ен|ьна|ьно)\s+до|годен\s+до|годна\s+до|'
+      r'срок\s+действия\s+до|действует\s+до|дата\s+окончания|'
+      r'окончания\s+срока|valid\s+(?:until|thru|through|to)|'
+      r'expir(?:y|es|ation)|exp\.?\s*date|date\s+of\s+expiry)',
+      caseSensitive: false,
+    );
+    final cueMatch = cue.firstMatch(text);
+    if (cueMatch == null) return null;
+    return _parseFlexibleDate(text.substring(cueMatch.end));
+  }
+
+  DateTime? _parseFlexibleDate(String text) {
+    final dmy = RegExp(
+      r'(\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4})',
+    ).firstMatch(text);
+    if (dmy != null) return _parseDayMonthYear(dmy.group(1)!);
+    final iso = RegExp(r'(\d{4})-(\d{2})-(\d{2})').firstMatch(text);
+    if (iso != null) {
+      final y = int.tryParse(iso.group(1)!);
+      final m = int.tryParse(iso.group(2)!);
+      final d = int.tryParse(iso.group(3)!);
+      if (y != null && m != null && d != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    return null;
+  }
+
+  DateTime? _parseDayMonthYear(String raw) {
+    final parts = raw.split(RegExp(r'[./\-]'));
+    if (parts.length != 3) return null;
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    var year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+    if (year < 100) year += 2000;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return DateTime(year, month, day);
   }
 
   String? _formatDate(DateTime? date) {
