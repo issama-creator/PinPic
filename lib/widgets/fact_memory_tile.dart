@@ -24,6 +24,12 @@ class FactMemoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = Theme.of(context).brightness == Brightness.light;
+    final card = isLight ? const Color(0xFFF2F3F7) : const Color(0xFF16161F);
+    final text = isLight ? const Color(0xFF12121A) : Colors.white;
+    final muted = isLight ? const Color(0xFF5C5C6A) : AppColors.textMuted;
+    final chipBg = isLight ? const Color(0xFFE4E6EE) : const Color(0xFF242430);
+
     final entities = EntityExtractionService().extract(
       ocrText: photo.ocrText,
       category: photo.category,
@@ -44,7 +50,7 @@ class FactMemoryTile extends StatelessWidget {
     );
 
     return Material(
-      color: const Color(0xFF16161F),
+      color: card,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -65,10 +71,10 @@ class FactMemoryTile extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: text,
                             letterSpacing: -0.2,
                           ),
                         ),
@@ -81,7 +87,7 @@ class FactMemoryTile extends StatelessWidget {
                             style: TextStyle(
                               fontSize: fact.isSecret ? 20 : 18,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: text,
                               height: 1.2,
                               letterSpacing: fact.isSecret ? 0.2 : -0.2,
                             ),
@@ -93,10 +99,10 @@ class FactMemoryTile extends StatelessWidget {
                             subtitle,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               height: 1.3,
-                              color: AppColors.textMuted,
+                              color: muted,
                             ),
                           ),
                         ],
@@ -150,15 +156,15 @@ class FactMemoryTile extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF242430),
+                          color: chipBg,
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(
                           '$confidence%',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textMuted,
+                            color: muted,
                           ),
                         ),
                       ),
@@ -169,15 +175,15 @@ class FactMemoryTile extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF242430),
+                          color: chipBg,
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(
                           chip,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textMuted,
+                            color: muted,
                           ),
                         ),
                       ),

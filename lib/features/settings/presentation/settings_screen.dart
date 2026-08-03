@@ -26,21 +26,34 @@ class SettingsScreen extends ConsumerWidget {
     final settingsAsync = ref.watch(appSettingsProvider);
     final useLight = settingsAsync.asData?.value.useLightTheme ?? false;
     final theme = Theme.of(context);
+    final remindersOn =
+        settingsAsync.asData?.value.expiryRemindersEnabled ?? false;
 
     final body = ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
         if (embedded) ...[
-          Text('Настройки', style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 16),
+          Text(
+            'Настройки',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
         GlassContainer(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text('Фон', style: theme.textTheme.titleMedium),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                child: Text(
+                  'Фон',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
@@ -76,24 +89,23 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: const Text('Приватность'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        GlassContainer(
+          child: Column(
+            children: [
+              _SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Приватность',
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push(RoutePaths.privacy),
               ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.cloud_off_outlined),
-                title: const Text('Офлайн режим'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push(RoutePaths.offline),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded),
-                title: const Text('Очистить историю поиска'),
+              const _SettingsDivider(),
+              _SettingsTile(
+                icon: Icons.delete_outline_rounded,
+                title: 'Очистить историю поиска',
                 onTap: () async {
                   await ref.read(searchHistoryRepositoryProvider).clear();
                   if (context.mounted) {
@@ -103,15 +115,18 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
-              const Divider(height: 1),
+              const _SettingsDivider(),
               SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 secondary: const Icon(Icons.notifications_active_outlined),
                 title: const Text('Напоминания о сроках'),
                 subtitle: const Text(
                   'Локальные уведомления о документах с датой окончания',
                 ),
-                value:
-                    settingsAsync.asData?.value.expiryRemindersEnabled ?? false,
+                value: remindersOn,
                 onChanged: (enabled) async {
                   if (enabled) {
                     final granted = await ref
@@ -137,11 +152,11 @@ class SettingsScreen extends ConsumerWidget {
                   ref.invalidate(appSettingsProvider);
                 },
               ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.refresh_rounded),
-                title: const Text('Переиндексировать всё'),
-                subtitle: const Text('Заново прочитает текст и документы'),
+              const _SettingsDivider(),
+              _SettingsTile(
+                icon: Icons.refresh_rounded,
+                title: 'Переиндексировать всё',
+                subtitle: 'Заново прочитает текст и документы',
                 onTap: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
@@ -179,11 +194,13 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
         Text(
           '${AppConstants.appName} · локальный поиск',
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+          ),
         ),
       ],
     );
@@ -193,6 +210,48 @@ class SettingsScreen extends ConsumerWidget {
     return AppScaffold(
       appBar: AppBar(title: const Text('Настройки')),
       body: SafeArea(child: body),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle!),
+      trailing: trailing,
+      onTap: onTap,
+    );
+  }
+}
+
+class _SettingsDivider extends StatelessWidget {
+  const _SettingsDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      indent: 56,
+      endIndent: 16,
+      color: Theme.of(context).dividerColor.withValues(alpha: 0.45),
     );
   }
 }
@@ -236,7 +295,11 @@ class _ThemePreviewCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: SizedBox(height: 72, width: double.infinity, child: preview),
+                child: SizedBox(
+                  height: 72,
+                  width: double.infinity,
+                  child: preview,
+                ),
               ),
               const SizedBox(height: 10),
               Row(

@@ -137,13 +137,14 @@ class SearchService {
     final safeOffset = offset.clamp(0, hits.length);
     final end = (safeOffset + limit).clamp(0, hits.length);
     final items = hits.sublist(safeOffset, end);
+    final similarFallback =
+        hits.isNotEmpty && hits.every((hit) => hit.isSimilar);
     return SearchPage(
       items: items,
       nextOffset: end,
       hasMore: end < hits.length,
       total: hits.length,
-      isSimilarFallback:
-          items.isNotEmpty && items.every((hit) => hit.isSimilar),
+      isSimilarFallback: similarFallback,
     );
   }
 
@@ -398,7 +399,82 @@ class SearchService {
       final bDate = b.photo.dateTaken ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bDate.compareTo(aDate);
     });
+
+    // Never leave a free-text search empty if memory already has something.
+    if (hits.isEmpty &&
+        originalTokens.isNotEmpty &&
+        !favoritesOnly) {
+      return _antiEmptyRescue(
+        category: category,
+        inferredCategories: inferredCategories,
+      );
+    }
     return hits;
+  }
+
+  /// Approximate / recent / category neighbours — better than a blank screen.
+  Future<List<SearchHit>> _antiEmptyRescue({
+    String? category,
+    required List<String> inferredCategories,
+  }) async {
+    final merged = <String, PhotoEntity>{};
+
+    Future<void> take(List<PhotoEntity> photos) async {
+      for (final photo in photos) {
+        merged.putIfAbsent(photo.mediaId, () => photo);
+        if (merged.length >= 24) return;
+      }
+    }
+
+    if (category != null) {
+      await take(
+        await _photos.searchCandidatesForTokens(
+          tokens: const {},
+          category: category,
+          favoritesOnly: false,
+        ),
+      );
+    }
+    for (final inferred in inferredCategories) {
+      if (merged.length >= 24) break;
+      await take(
+        await _photos.searchCandidatesForTokens(
+          tokens: const {},
+          category: inferred,
+          favoritesOnly: false,
+        ),
+      );
+    }
+    if (merged.length < 12) {
+      await take(await _photos.getRecentDocuments(limit: 24));
+    }
+    if (merged.length < 8) {
+      await take(await _photos.getPinned(limit: 16));
+    }
+    if (merged.isEmpty) {
+      await take(await _photos.semanticCandidatePool(limit: 24));
+    }
+
+    final rescued = merged.values.toList(growable: false)
+      ..sort((a, b) {
+        final byPin = (b.isPinned ? 1 : 0).compareTo(a.isPinned ? 1 : 0);
+        if (byPin != 0) return byPin;
+        final aDate = a.dateTaken ?? a.indexedAt;
+        final bDate = b.dateTaken ?? b.indexedAt;
+        return bDate.compareTo(aDate);
+      });
+
+    return [
+      for (final photo in rescued.take(20))
+        SearchHit(
+          photo: photo,
+          score: 1,
+          confidence: 32,
+          reason: 'Близко',
+          evidence: const ['не точное совпадение'],
+          isSimilar: true,
+        ),
+    ];
   }
 
   Future<Set<String>> _vocabulary() async {

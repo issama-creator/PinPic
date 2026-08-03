@@ -173,20 +173,43 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              _similarFallback
-                  ? 'Похожие результаты'
-                  : '$_total результат${_plural(_total)}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        if (_similarFallback)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF242430),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.purple.withValues(alpha: 0.35),
+                ),
+              ),
+              child: const Text(
+                'Точного совпадения нет — показали близкое из памяти',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '$_total результат${_plural(_total)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
             ),
           ),
-        ),
         Expanded(child: _buildResultSections(context)),
       ],
     );
@@ -313,14 +336,16 @@ class _EmptyResults extends StatelessWidget {
           'Если документ уже есть — попробуйте поиск или подождите, '
           'пока память обновится.';
     } else {
-      title = 'Ничего не найдено';
+      title = indexingBusy ? 'Память ещё собирается' : 'Пока пусто в памяти';
       description =
           indexingBusy
-          ? 'По запросу «$query» пока пусто. Память ещё собирается — '
-                'попробуйте чуть позже или другой запрос.'
-          : 'По запросу «$query» в памяти ничего нет. '
-                'Попробуйте другое слово — или откройте коллекцию.';
+          ? 'По запросу «$query» пока нечего показать. '
+                'Подождите немного или добавьте фото вручную.'
+          : 'По запросу «$query» в памяти ещё ничего нет. '
+                'Добавьте чек или скрин — и поиск заработает.';
     }
+
+    final showScan = !favoritesOnly && !isCategoryOnly;
 
     return AppEmptyState(
       icon: icon,
@@ -334,10 +359,14 @@ class _EmptyResults extends StatelessWidget {
                 '${RoutePaths.results}?q=${Uri.encodeQueryComponent(tip)}',
               );
             },
-      primaryLabel: isCategoryOnly || favoritesOnly
-          ? 'На главную'
-          : 'Изменить запрос',
+      primaryLabel: showScan
+          ? 'Добавить важное'
+          : (isCategoryOnly || favoritesOnly ? 'На главную' : 'Изменить запрос'),
       onPrimary: () {
+        if (showScan) {
+          context.push(RoutePaths.scanDocument);
+          return;
+        }
         if (context.canPop()) {
           context.pop();
         } else {

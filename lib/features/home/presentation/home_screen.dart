@@ -16,6 +16,7 @@ import 'package:pinpic/shared/models/app_settings_entity.dart';
 import 'package:pinpic/shared/models/index_progress.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
 import 'package:pinpic/widgets/async_state_view.dart';
+import 'package:pinpic/widgets/fact_memory_tile.dart';
 import 'package:pinpic/widgets/photo_thumbnail.dart';
 
 /// A completed library is left untouched on app entry until the visible media
@@ -91,18 +92,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   int _tab = 0;
 
   static const _categories = <_QuickCategory>[
-    _QuickCategory('Документы', Icons.description_outlined, Color(0xFF5B8CFF)),
-    _QuickCategory('Чеки', Icons.receipt_long_outlined, Color(0xFF34C759)),
-    _QuickCategory(
-      'Билеты',
-      Icons.confirmation_number_outlined,
-      Color(0xFF34AADC),
-    ),
-    _QuickCategory('Гарантии', Icons.verified_outlined, Color(0xFF4CC9F0)),
-    _QuickCategory('Визитки', Icons.contact_page_outlined, Color(0xFF00B8A9)),
-    _QuickCategory('Пароли', Icons.wifi_password_rounded, Color(0xFFFF5C7A)),
-    _QuickCategory('QR', Icons.qr_code_2_rounded, Color(0xFFA855F7)),
-    _QuickCategory('Паспорта', Icons.badge_outlined, Color(0xFF7C9CFF)),
+    _QuickCategory('Документы', Icons.article_rounded, Color(0xFF5B8CFF)),
+    _QuickCategory('Чеки', Icons.receipt_long_rounded, Color(0xFF34C759)),
+    _QuickCategory('Билеты', Icons.airplane_ticket_rounded, Color(0xFF34AADC)),
+    _QuickCategory('Гарантии', Icons.verified_user_rounded, Color(0xFF4CC9F0)),
+    _QuickCategory('Визитки', Icons.contact_mail_rounded, Color(0xFF00B8A9)),
+    _QuickCategory('Пароли', Icons.vpn_key_rounded, Color(0xFFFF5C7A)),
+    _QuickCategory('QR', Icons.qr_code_scanner_rounded, Color(0xFFA855F7)),
+    _QuickCategory('Паспорта', Icons.badge_rounded, Color(0xFF7C9CFF)),
   ];
 
   @override
@@ -463,27 +460,6 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
             error: (_, __) =>
                 const SliverToBoxAdapter(child: SizedBox.shrink()),
           ),
-          ref.watch(recentDocumentsProvider).when(
-            data: (recent) {
-              if (recent.isEmpty) {
-                return const SliverToBoxAdapter(child: SizedBox.shrink());
-              }
-              return SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                  child: _HabitRail(
-                    title: 'Недавно важное',
-                    photos: recent,
-                    onOpenPhoto: widget.onOpenPhoto,
-                  ),
-                ),
-              );
-            },
-            loading: () =>
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
-            error: (_, __) =>
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
-          ),
           pinnedAsync.when(
             data: (pinned) {
               if (pinned.isEmpty) {
@@ -507,30 +483,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => context.push(RoutePaths.scanDocument),
-                  icon: Icon(
-                    Icons.add_a_photo_outlined,
-                    color: style.accent,
-                    size: 20,
-                  ),
-                  label: Text(
-                    'Добавить важное фото',
-                    style: TextStyle(
-                      color: style.accent,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
               child: Text(
                 'Коллекции',
                 style: TextStyle(
@@ -554,7 +507,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                     crossAxisCount: 4,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 10,
-                    childAspectRatio: 0.78,
+                    childAspectRatio: 0.72,
                   ),
                   itemBuilder: (context, index) {
                     final item = widget.categories[index];
@@ -573,7 +526,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                     crossAxisCount: 4,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 10,
-                    childAspectRatio: 0.78,
+                    childAspectRatio: 0.72,
                   ),
                   itemBuilder: (context, index) {
                     final item = widget.categories[index];
@@ -594,7 +547,7 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                       crossAxisCount: 4,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 10,
-                      childAspectRatio: 0.78,
+                      childAspectRatio: 0.72,
                     ),
                     itemBuilder: (context, index) {
                       final item = widget.categories[index];
@@ -1047,7 +1000,7 @@ class _CategoryTile extends StatelessWidget {
                 child: Stack(
                   children: [
                     Center(
-                      child: Icon(item.icon, color: item.color, size: 28),
+                      child: Icon(item.icon, color: item.color, size: 34),
                     ),
                     if (showCount)
                       Positioned(
@@ -1738,19 +1691,21 @@ class _FavoritesTabState extends ConsumerState<_FavoritesTab> {
       }
     });
 
+    final style = _HomeStyle.of(context);
+
     if (_loading) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
       return AppRetryState(
         message: _error!,
-        textColor: _HomeStyle.of(context).label,
+        textColor: style.label,
         onRetry: () => _load(reset: true),
       );
     }
     if (_items.isEmpty) {
       return AppEmptyState(
-        icon: Icons.favorite_border_rounded,
+        icon: Icons.star_border_rounded,
         title: 'Избранное пусто',
         description:
             'Отметьте важное фото звёздочкой — оно появится здесь.',
@@ -1761,33 +1716,61 @@ class _FavoritesTabState extends ConsumerState<_FavoritesTab> {
 
     return RefreshIndicator(
       onRefresh: () => _load(reset: true),
-      child: GridView.builder(
+      child: CustomScrollView(
         controller: _controller,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-        ),
-        itemCount: _items.length + (_loadingMore ? 3 : 0),
-        itemBuilder: (context, index) {
-          if (index >= _items.length) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final photo = _items[index];
-          return GestureDetector(
-            onTap: () => widget.onOpenPhoto(photo.mediaId),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: PhotoThumbnail(
-                mediaId: photo.mediaId,
-                filePath: photo.path,
-                width: 300,
-                height: 300,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _HomeBrand(),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Избранное',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.4,
+                      color: style.text,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${_items.length} в избранном',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: style.muted,
+                    ),
+                  ),
+                ],
               ),
             ),
-          );
-        },
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+            sliver: SliverList.separated(
+              itemCount: _items.length + (_loadingMore ? 1 : 0),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                if (index >= _items.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final photo = _items[index];
+                return FactMemoryTile(
+                  photo: photo,
+                  onTap: () => widget.onOpenPhoto(photo.mediaId),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
