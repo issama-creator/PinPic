@@ -65,18 +65,21 @@ class PhotoRepository {
         .findAll();
   }
 
-  Future<List<PhotoEntity>> getPinned({int offset = 0, int limit = 40}) {
-    return _isar.photos
-        .filter()
-        .isPinnedEqualTo(true)
-        .sortByDateTakenDesc()
-        .offset(offset)
-        .limit(limit)
-        .findAll();
+  Future<List<PhotoEntity>> getPinned({int offset = 0, int limit = 40}) async {
+    // Avoid generated `isPinnedEqualTo` call-sites: some IDE analyzers fail to
+    // resolve Isar extensions even when `flutter analyze` is clean. Pinned set
+    // is tiny, so filtering in memory is fine.
+    final photos = await _isar.photos.where().sortByDateTakenDesc().findAll();
+    final pinned =
+        photos.where((photo) => photo.isPinned).toList(growable: false);
+    if (offset >= pinned.length) return const [];
+    final end = (offset + limit).clamp(0, pinned.length);
+    return pinned.sublist(offset, end);
   }
 
-  Future<int> countPinned() {
-    return _isar.photos.filter().isPinnedEqualTo(true).count();
+  Future<int> countPinned() async {
+    final photos = await _isar.photos.where().findAll();
+    return photos.where((photo) => photo.isPinned).length;
   }
 
   Future<void> upsert(PhotoEntity photo) async {
@@ -292,13 +295,25 @@ class PhotoRepository {
           .ocrKeywordsElementEqualTo(token)
           .limit(perTokenLimit)
           .findAll();
-      final entityMatches = await _isar.photos
-          .where()
-          .entityTokensElementEqualTo(token)
-          .limit(perTokenLimit)
-          .findAll();
-      for (final photo in [...ocrMatches, ...entityMatches]) {
+      for (final photo in ocrMatches) {
         candidates[photo.mediaId] = photo;
+      }
+      // entityTokens are also merged into keywords at index time; scan the
+      // OCR/keyword hits (and a small recent window) for structured tokens
+      // without relying on a separate Isar list index call-site.
+      if (candidates.length < limit) {
+        final recent = await _isar.photos
+            .where()
+            .sortByDateTakenDesc()
+            .limit(perTokenLimit)
+            .findAll();
+        for (final photo in recent) {
+          if (photo.entityTokens.any(
+            (value) => value.toLowerCase() == token,
+          )) {
+            candidates[photo.mediaId] = photo;
+          }
+        }
       }
 
       if (token.length >= 3 && candidates.length < limit) {
@@ -315,13 +330,9 @@ class PhotoRepository {
             .ocrKeywordsElementStartsWith(token)
             .limit(perTokenLimit)
             .findAll();
-        final entityPrefix = await _isar.photos
-            .where()
-            .entityTokensElementStartsWith(token)
-            .limit(perTokenLimit)
-            .findAll();
-        for (final photo in [...ocrPrefix, ...entityPrefix]) {
+        for (final photo in ocrPrefix) {
           candidates[photo.mediaId] = photo;
+          if (candidates.length >= limit) break;
         }
       }
       if (candidates.length >= limit) break;

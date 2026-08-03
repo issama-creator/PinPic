@@ -890,9 +890,7 @@ class _CategoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = _HomeStyle.of(context);
-    final label = count != null && count! > 0
-        ? '${item.label} $count'
-        : item.label;
+    final showCount = count != null && count! > 0;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -908,12 +906,42 @@ class _CategoryTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: style.border),
                 ),
-                child: Icon(item.icon, color: item.color, size: 28),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Icon(item.icon, color: item.color, size: 28),
+                    ),
+                    if (showCount)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: item.color.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: item.color,
+                              height: 1.1,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              label,
+              item.label,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -1022,7 +1050,9 @@ class _MemoryStatusCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
-                  ready ? Icons.auto_awesome_rounded : Icons.psychology_alt_rounded,
+                  ready
+                      ? Icons.push_pin_rounded
+                      : Icons.hourglass_top_rounded,
                   color: style.accent,
                   size: 22,
                 ),
