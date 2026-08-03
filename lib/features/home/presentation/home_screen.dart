@@ -1216,15 +1216,14 @@ class _MemoryStatusCard extends StatelessWidget {
     final subtitle = switch (status) {
       IndexingStatus.running =>
         stage == IndexingStage.fast
-            ? 'Уже можно искать — коллекции наполнятся по мере чтения'
+            ? 'Сначала скрины и свежее — искать можно уже сейчас'
             : 'Уточняем текст в фоне',
       IndexingStatus.paused => 'Продолжите, когда удобно',
       IndexingStatus.failed => errorMessage ?? 'Нажмите, чтобы повторить',
-      IndexingStatus.completed =>
-        'Чеки, пароли, билеты и коды — не пейзажи и «найди кота»',
+      IndexingStatus.completed => 'Спросите то, что помните',
       IndexingStatus.idle =>
         progress <= 0
-            ? 'Откройте доступ к галерее — PinPic запомнит важное с текстом'
+            ? 'Откройте доступ и начните'
             : 'Спросите то, что помните',
     };
 
@@ -1754,8 +1753,7 @@ class _FavoritesTabState extends ConsumerState<_FavoritesTab> {
         icon: Icons.favorite_border_rounded,
         title: 'Избранное пусто',
         description:
-            'Закрепите чек, пароль или билет — то, где важен текст или код. '
-            'Пейзажи и «просто фото» сюда не нужны.',
+            'Отметьте важное фото звёздочкой — оно появится здесь.',
         primaryLabel: 'К поиску',
         onPrimary: widget.onGoSearch,
       );

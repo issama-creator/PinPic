@@ -30,6 +30,25 @@ void main() {
     expect(service.progress.fraction, 1);
   });
 
+  test('priority photos are indexed before the rest of the gallery', () async {
+    final ocr = _FakeOcr();
+    final media = _FakeMedia(
+      [_device('old'), _device('shot', mimeType: 'image/png')],
+      priorityIds: const ['shot'],
+    );
+    final photos = _FakePhotos();
+    final service = _service(media: media, photos: photos, ocr: ocr);
+    addTearDown(service.dispose);
+
+    await service.start();
+
+    expect(media.fetchOrder.first, 'priority');
+    expect(media.fetchOrder, contains('all:0'));
+    expect(photos.items.keys, {'old', 'shot'});
+    expect(ocr.fastCalls, 2);
+    expect(service.progress.status, IndexingStatus.completed);
+  });
+
   test('skips unchanged fingerprint without running OCR', () async {
     final device = _device('same');
     final photos = _FakePhotos()
@@ -244,18 +263,35 @@ PhotoEntity _entity(String id, {required String hash}) {
 }
 
 class _FakeMedia extends PhotoMediaService {
-  _FakeMedia(this.photos);
+  _FakeMedia(this.photos, {this.priorityIds = const []});
 
   final List<DevicePhoto> photos;
+  final List<String> priorityIds;
+  final List<String> fetchOrder = [];
 
   @override
   Future<int> countDevicePhotos() async => photos.length;
+
+  @override
+  Future<List<DevicePhoto>> fetchPriorityPhotos({
+    int recentDays = PhotoMediaService.priorityRecentDays,
+    int maxCount = PhotoMediaService.priorityMaxCount,
+  }) async {
+    fetchOrder.add('priority');
+    if (priorityIds.isEmpty) return const [];
+    final byId = {for (final photo in photos) photo.mediaId: photo};
+    return [
+      for (final id in priorityIds)
+        if (byId[id] != null) byId[id]!,
+    ].take(maxCount).toList(growable: false);
+  }
 
   @override
   Future<List<DevicePhoto>> fetchDevicePhotos({
     int page = 0,
     int pageSize = 100,
   }) async {
+    fetchOrder.add('all:$page');
     final start = page * pageSize;
     if (start >= photos.length) return const [];
     final end = (start + pageSize).clamp(0, photos.length);

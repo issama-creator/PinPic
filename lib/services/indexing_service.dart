@@ -122,7 +122,7 @@ class IndexingService {
         totalCategories: knownCategories.length,
       );
 
-      // Load PP-OCR models while the fast pass walks the gallery.
+      // Load PP-OCR models while the priority + fast passes walk the gallery.
       final deepWarmup = _ocr.warmupDeepOcr();
 
       var page = 0;
@@ -134,6 +134,67 @@ class IndexingService {
       var ranDeepPass = false;
       final fastStopwatch = Stopwatch()..start();
 
+      // 1) Narrow first: screenshots / chats / recent — searchable ASAP.
+      final priorityStopwatch = Stopwatch()..start();
+      final priorityPhotos = await _media.fetchPriorityPhotos();
+      final priorityIds = <String>{
+        for (final photo in priorityPhotos) photo.mediaId,
+      };
+      if (priorityPhotos.isNotEmpty && !_stopRequested) {
+        _emit(
+          IndexProgress(
+            processed: 0,
+            total: total,
+            isRunning: true,
+            isCompleted: false,
+            status: IndexingStatus.running,
+            stage: IndexingStage.fast,
+            currentFileName: 'Сначала важное',
+          ),
+        );
+        for (var i = 0; i < priorityPhotos.length && !_stopRequested; i += _pageSize) {
+          final end = math.min(i + _pageSize, priorityPhotos.length);
+          final batch = priorityPhotos.sublist(i, end);
+          deviceMediaIds.addAll(batch.map((photo) => photo.mediaId));
+          final batchResult = await _indexPhotoBatch(
+            batch,
+            total: total,
+            forceFull: forceFull,
+            knownCategories: knownCategories,
+            deepTasks: deepTasks,
+            deepQueuedIds: deepQueuedIds,
+          );
+          newlyIndexed += batchResult.newlyIndexed;
+          failedPhotos += batchResult.failed;
+        }
+        priorityStopwatch.stop();
+        if (kDebugMode) {
+          debugPrint(
+            'Index priority pass: ${priorityPhotos.length} photos in '
+            '${priorityStopwatch.elapsedMilliseconds}ms',
+          );
+        }
+        // Memory is already useful — refresh stats / sample hint before the rest.
+        final indexedAfterPriority = await _photos.countAll();
+        await _settings.updateIndexStats(
+          totalPhotosFound: total,
+          totalIndexed: indexedAfterPriority,
+          totalCategories: knownCategories.length,
+        );
+        _emit(
+          IndexProgress(
+            processed: _progress.processed.clamp(0, total),
+            total: total,
+            isRunning: true,
+            isCompleted: false,
+            status: IndexingStatus.running,
+            stage: IndexingStage.fast,
+            currentFileName: 'Уже можно искать',
+          ),
+        );
+      }
+
+      // 2) Rest of the gallery (skip ids already handled in the priority pass).
       Future<List<DevicePhoto>>? nextBatchFuture = _media.fetchDevicePhotos(
         page: 0,
         pageSize: _pageSize,
@@ -151,16 +212,23 @@ class IndexingService {
         );
 
         deviceMediaIds.addAll(batch.map((photo) => photo.mediaId));
-        final batchResult = await _indexPhotoBatch(
-          batch,
-          total: total,
-          forceFull: forceFull,
-          knownCategories: knownCategories,
-          deepTasks: deepTasks,
-          deepQueuedIds: deepQueuedIds,
-        );
-        newlyIndexed += batchResult.newlyIndexed;
-        failedPhotos += batchResult.failed;
+        final remaining = priorityIds.isEmpty
+            ? batch
+            : batch
+                .where((photo) => !priorityIds.contains(photo.mediaId))
+                .toList(growable: false);
+        if (remaining.isNotEmpty) {
+          final batchResult = await _indexPhotoBatch(
+            remaining,
+            total: total,
+            forceFull: forceFull,
+            knownCategories: knownCategories,
+            deepTasks: deepTasks,
+            deepQueuedIds: deepQueuedIds,
+          );
+          newlyIndexed += batchResult.newlyIndexed;
+          failedPhotos += batchResult.failed;
+        }
 
         batchesSinceStatsUpdate++;
         if (batchesSinceStatsUpdate >= 3) {
