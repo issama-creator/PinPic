@@ -29,6 +29,7 @@ class IndexingService {
     LocalSemanticEmbeddingService? embeddingService,
     DocumentSummaryService? summaryService,
     void Function(List<PhotoEntity> photos)? onPhotosIndexed,
+    @visibleForTesting int maxDeepOcrPerRun = _defaultMaxDeepOcrPerRun,
   }) : _media = mediaService,
        _photos = photoRepository,
        _settings = settingsRepository,
@@ -38,7 +39,8 @@ class IndexingService {
        _keywords = keywordEngine ?? KeywordEngine(),
        _embeddings = embeddingService ?? LocalSemanticEmbeddingService(),
        _summaries = summaryService ?? DocumentSummaryService(),
-       _onPhotosIndexed = onPhotosIndexed;
+       _onPhotosIndexed = onPhotosIndexed,
+       _maxDeepOcrPerRun = maxDeepOcrPerRun;
 
   final PhotoMediaService _media;
   final PhotoRepository _photos;
@@ -50,6 +52,7 @@ class IndexingService {
   final LocalSemanticEmbeddingService _embeddings;
   final DocumentSummaryService _summaries;
   final void Function(List<PhotoEntity> photos)? _onPhotosIndexed;
+  final int _maxDeepOcrPerRun;
 
   final _progressController = StreamController<IndexProgress>.broadcast();
 
@@ -67,6 +70,8 @@ class IndexingService {
   static const _fastConcurrency = 2;
   static const _prepConcurrency = 4;
   static const _maxIndexedSignalTerms = 120;
+  /// Deep PP-OCR is expensive — finish the best candidates this run, rest later.
+  static const _defaultMaxDeepOcrPerRun = 96;
 
   /// Raster formats that Android's `BitmapFactory` can decode.
   static const _decodableMimeTypes = {
@@ -160,6 +165,7 @@ class IndexingService {
             batch,
             total: total,
             forceFull: forceFull,
+            thorough: true,
             knownCategories: knownCategories,
             deepTasks: deepTasks,
             deepQueuedIds: deepQueuedIds,
@@ -222,6 +228,8 @@ class IndexingService {
             remaining,
             total: total,
             forceFull: forceFull,
+            // Rest of gallery: skip obvious camera scenery, OCR the rest lightly.
+            thorough: forceFull,
             knownCategories: knownCategories,
             deepTasks: deepTasks,
             deepQueuedIds: deepQueuedIds,
@@ -258,7 +266,24 @@ class IndexingService {
               mediaId: photo.mediaId,
               path: photo.path,
               displayName: photo.displayName,
+              category: photo.category,
+              mimeType: photo.mimeType,
+              hasQr: photo.hasQr,
+              fastText: photo.ocrText,
             ),
+          );
+        }
+      }
+
+      // Cap expensive deep OCR — best document-like candidates first.
+      if (deepTasks.length > _maxDeepOcrPerRun) {
+        deepTasks
+          ..sort((a, b) => b.priorityScore.compareTo(a.priorityScore))
+          ..removeRange(_maxDeepOcrPerRun, deepTasks.length);
+        if (kDebugMode) {
+          debugPrint(
+            'Index deep OCR capped to $_maxDeepOcrPerRun '
+            '(backlog continues next run)',
           );
         }
       }
@@ -361,6 +386,7 @@ class IndexingService {
     List<DevicePhoto> batch, {
     required int total,
     required bool forceFull,
+    required bool thorough,
     required Set<String> knownCategories,
     required List<_DeepOcrTask> deepTasks,
     required Set<String> deepQueuedIds,
@@ -394,7 +420,14 @@ class IndexingService {
         }
         if (existing?.needsDeepOcr == true &&
             deepQueuedIds.add(device.mediaId)) {
-          deepTasks.add(_DeepOcrTask(device));
+          deepTasks.add(
+            _DeepOcrTask(
+              device,
+              category: existing?.category,
+              fastText: existing?.ocrText,
+              hasQr: existing?.hasQr ?? false,
+            ),
+          );
         }
         _emitProgress(
           _progress.copyWith(
@@ -410,6 +443,38 @@ class IndexingService {
           'Skipping non-raster/undecodable file '
           '(mime=${device.mimeType}): ${device.path}',
         );
+        _emitProgress(
+          _progress.copyWith(
+            processed: (_progress.processed + 1).clamp(0, total),
+            currentFileName: device.displayName ?? device.mediaId,
+          ),
+        );
+        continue;
+      }
+
+      // Large camera-roll JPEGs rarely hold the "memory" PinPic cares about.
+      // Index a lightweight shell so incremental sync still works.
+      if (!thorough && _isLikelyScenicCameraPhoto(device)) {
+        toUpsert.add(
+          PhotoEntity.create(
+            mediaId: device.mediaId,
+            path: device.path,
+            hash: hash,
+            width: device.width,
+            height: device.height,
+            sizeBytes: device.sizeBytes,
+            indexedAt: DateTime.now(),
+            displayName: device.displayName,
+            dateTaken: device.createDate,
+            album: device.album,
+            mimeType: device.mimeType,
+            isFavorite: existing?.isFavorite ?? false,
+            isPinned: existing?.isPinned ?? false,
+            needsDeepOcr: false,
+            modifiedAt: device.modifiedDate,
+          ),
+        );
+        newlyIndexed++;
         _emitProgress(
           _progress.copyWith(
             processed: (_progress.processed + 1).clamp(0, total),
@@ -520,6 +585,8 @@ class IndexingService {
           ocrText,
           category: category,
           mimeType: device.mimeType,
+          album: device.album,
+          displayName: device.displayName,
           hasQr: resolvedQr.hasQr,
         );
         final entity = PhotoEntity.create(
@@ -560,7 +627,14 @@ class IndexingService {
         toUpsert.add(entity);
         newlyIndexed++;
         if (wantsDeep && deepQueuedIds.add(device.mediaId)) {
-          deepTasks.add(_DeepOcrTask(device));
+          deepTasks.add(
+            _DeepOcrTask(
+              device,
+              category: category,
+              fastText: ocrText,
+              hasQr: resolvedQr.hasQr,
+            ),
+          );
         }
       } catch (error, stack) {
         failedPhotos++;
@@ -611,6 +685,8 @@ class IndexingService {
     String? fastText, {
     String? category,
     String? mimeType,
+    String? album,
+    String? displayName,
     bool hasQr = false,
   }) {
     // Pure QR bitmaps rarely need Cyrillic PP-OCR; skip the expensive pass.
@@ -626,7 +702,14 @@ class IndexingService {
       return true;
     }
     final mime = mimeType?.toLowerCase() ?? '';
-    if (mime.contains('png') && _ocr.needsDeepText(fastText)) {
+    final albumName = album ?? '';
+    final fromScreenshotBucket =
+        PhotoMediaService.isPriorityAlbumName(albumName) ||
+        _nameLooksScreenshot(displayName);
+    // Empty PNG from Screenshots → deep. Random empty PNG elsewhere → skip.
+    if (mime.contains('png') &&
+        fromScreenshotBucket &&
+        _ocr.needsDeepText(fastText)) {
       return true;
     }
     final fast = fastText?.trim() ?? '';
@@ -634,6 +717,48 @@ class IndexingService {
     if (hasQr) return false;
     if (_looksDocumentish(fast)) return true;
     return false;
+  }
+
+  /// Camera-roll JPEGs with typical names — skip OCR/QR on the light pass.
+  bool _isLikelyScenicCameraPhoto(DevicePhoto device) {
+    final mime = (device.mimeType ?? '').toLowerCase();
+    final name = (device.displayName ?? '').toLowerCase();
+    final album = (device.album ?? '').toLowerCase();
+
+    if (PhotoMediaService.isPriorityAlbumName(album)) return false;
+    if (_nameLooksScreenshot(name) || _nameLooksDocumentish(name)) {
+      return false;
+    }
+
+    final isJpeg =
+        mime.contains('jpeg') ||
+        mime.contains('jpg') ||
+        name.endsWith('.jpg') ||
+        name.endsWith('.jpeg');
+    if (!isJpeg) return false;
+    if (device.width < 1200 || device.height < 1200) return false;
+
+    // Typical camera / phone filenames.
+    return RegExp(
+      r'^(img[_-]?\d|pxl_|dsc[_-]?\d|mvimg|photo[_-]?\d|\d{8}[_-]\d)',
+      caseSensitive: false,
+    ).hasMatch(name);
+  }
+
+  bool _nameLooksScreenshot(String? raw) {
+    final name = (raw ?? '').toLowerCase();
+    return name.contains('screenshot') ||
+        name.contains('скрин') ||
+        name.contains('screen shot');
+  }
+
+  bool _nameLooksDocumentish(String? raw) {
+    final name = (raw ?? '').toLowerCase();
+    return RegExp(
+      r'receipt|invoice|ticket|passport|contract|warranty|скан|чек|билет|'
+      r'паспорт|договор|гарант|визит|qr',
+      caseSensitive: false,
+    ).hasMatch(name);
   }
 
   bool _looksDocumentish(String text) {
@@ -823,18 +948,58 @@ class IndexingService {
 }
 
 class _DeepOcrTask {
-  _DeepOcrTask(DevicePhoto photo)
-    : mediaId = photo.mediaId,
-      path = photo.path,
-      displayName = photo.displayName;
+  _DeepOcrTask(
+    DevicePhoto photo, {
+    this.category,
+    this.fastText,
+    this.hasQr = false,
+  }) : mediaId = photo.mediaId,
+       path = photo.path,
+       displayName = photo.displayName,
+       mimeType = photo.mimeType;
 
   _DeepOcrTask.fromFields({
     required this.mediaId,
     required this.path,
     this.displayName,
+    this.category,
+    this.mimeType,
+    this.hasQr = false,
+    this.fastText,
   });
 
   final String mediaId;
   final String path;
   final String? displayName;
+  final String? category;
+  final String? mimeType;
+  final bool hasQr;
+  final String? fastText;
+
+  /// Higher = more likely a document worth deep PP-OCR this session.
+  int get priorityScore {
+    var score = 0;
+    if (category != null &&
+        CategoryEngine.documentFamily.contains(category) &&
+        category != CategoryEngine.qr) {
+      score += 100;
+    }
+    final text = fastText?.trim() ?? '';
+    if (text.isNotEmpty) {
+      score += RegExp(r'\d').allMatches(text).length.clamp(0, 40);
+      final lower = text.toLowerCase();
+      if (RegExp(
+        r'₽|руб|rub|total|sum|итого|сумма|договор|гарант|паспорт|'
+        r'passport|ticket|boarding|invoice|receipt|warranty|prescription|'
+        r'wifi|password|login|билет|чек|визит|страхов',
+        caseSensitive: false,
+      ).hasMatch(lower)) {
+        score += 50;
+      }
+    } else if ((mimeType ?? '').toLowerCase().contains('png')) {
+      score += 30;
+    }
+    if (hasQr) score -= 20;
+    return score;
+  }
 }

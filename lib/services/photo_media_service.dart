@@ -65,7 +65,7 @@ class PhotoMediaService {
       for (final album in albums) {
         if (out.length >= maxCount) break;
         if (album.isAll) continue;
-        if (!_isPriorityAlbumName(album.name)) continue;
+        if (!isPriorityAlbumName(album.name)) continue;
         await _appendAlbumPhotos(
           album: album,
           seen: seen,
@@ -182,7 +182,7 @@ class PhotoMediaService {
     }
   }
 
-  static bool _isPriorityAlbumName(String raw) {
+  static bool isPriorityAlbumName(String raw) {
     final name = raw.toLowerCase().trim();
     if (name.isEmpty) return false;
     const needles = <String>[

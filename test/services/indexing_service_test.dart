@@ -105,7 +105,14 @@ void main() {
       final ocr = _FakeOcr(fastResult: null, deepResult: 'Паспорт № 1234');
       final photos = _FakePhotos();
       final service = _service(
-        media: _FakeMedia([_device('deep', mimeType: 'image/png')]),
+        media: _FakeMedia([
+          _device(
+            'deep',
+            mimeType: 'image/png',
+            album: 'Screenshots',
+            displayName: 'Screenshot_1.png',
+          ),
+        ]),
         photos: photos,
         ocr: ocr,
       );
@@ -119,6 +126,81 @@ void main() {
       expect(service.progress.stage, IndexingStage.deep);
     },
   );
+
+  test('skips OCR for likely scenic camera JPEGs on the rest pass', () async {
+    final scenic = _device(
+      'cam',
+      displayName: 'IMG_1234.jpg',
+      width: 4000,
+      height: 3000,
+    );
+    final ocr = _FakeOcr();
+    final photos = _FakePhotos();
+    final service = _service(
+      media: _FakeMedia([scenic]),
+      photos: photos,
+      ocr: ocr,
+    );
+    addTearDown(service.dispose);
+
+    await service.start();
+
+    expect(ocr.fastCalls, 0);
+    expect(ocr.deepCalls, 0);
+    expect(photos.items['cam'], isNotNull);
+    expect(photos.items['cam']!.ocrText, isNull);
+  });
+
+  test('still OCRs scenic-looking photos in the priority pass', () async {
+    final scenic = _device(
+      'cam',
+      displayName: 'IMG_1234.jpg',
+      width: 4000,
+      height: 3000,
+    );
+    final ocr = _FakeOcr();
+    final service = _service(
+      media: _FakeMedia([scenic], priorityIds: const ['cam']),
+      photos: _FakePhotos(),
+      ocr: ocr,
+    );
+    addTearDown(service.dispose);
+
+    await service.start();
+
+    expect(ocr.fastCalls, 1);
+  });
+
+  test('caps deep OCR per run and keeps the backlog', () async {
+    final devices = List.generate(5, (index) => _device('deep-$index'));
+    final photos = _FakePhotos();
+    for (final device in devices) {
+      photos.items[device.mediaId] = (_entity(device.mediaId, hash: _hash(device))
+        ..needsDeepOcr = true
+        ..ocrText = '156 456 123456'
+        ..category = CategoryEngine.tickets);
+    }
+    final ocr = _FakeOcr(
+      deepResult: 'БИЛЕТ НА КОНЦЕРТ',
+      appendPath: false,
+    );
+    final service = _service(
+      media: _FakeMedia(devices),
+      photos: photos,
+      ocr: ocr,
+      maxDeepOcrPerRun: 2,
+    );
+    addTearDown(service.dispose);
+
+    await service.start();
+
+    expect(ocr.fastCalls, 0);
+    expect(ocr.deepCalls, 2);
+    expect(
+      photos.items.values.where((photo) => photo.needsDeepOcr).length,
+      3,
+    );
+  });
 
   test('runs deep OCR for a digit-only ticket fast result', () async {
     final ocr = _FakeOcr(
@@ -211,6 +293,7 @@ IndexingService _service({
   required _FakeMedia media,
   required _FakePhotos photos,
   _FakeOcr? ocr,
+  int maxDeepOcrPerRun = 96,
 }) {
   return IndexingService(
     mediaService: media,
@@ -219,6 +302,7 @@ IndexingService _service({
     ocrService: ocr ?? _FakeOcr(),
     qrService: _FakeQr(),
     categoryEngine: CategoryEngine(),
+    maxDeepOcrPerRun: maxDeepOcrPerRun,
   );
 }
 
@@ -226,14 +310,19 @@ DevicePhoto _device(
   String id, {
   int modifiedMinute = 1,
   String mimeType = 'image/jpeg',
+  String? displayName,
+  String? album,
+  int width = 100,
+  int height = 200,
 }) {
   return DevicePhoto(
     mediaId: id,
     path: '/$id.jpg',
-    width: 100,
-    height: 200,
+    width: width,
+    height: height,
     sizeBytes: 1000,
-    displayName: '$id.jpg',
+    displayName: displayName ?? '$id.jpg',
+    album: album,
     mimeType: mimeType,
     createDate: DateTime(2026, 1, 1),
     modifiedDate: DateTime(2026, 1, 1, 0, modifiedMinute),
