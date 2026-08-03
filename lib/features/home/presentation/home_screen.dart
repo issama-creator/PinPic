@@ -630,16 +630,16 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
               }
               return SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Text(
-                            'Последние поиски',
+                            'Недавние',
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 17,
                               fontWeight: FontWeight.w700,
                               color: style.text,
                               letterSpacing: -0.3,
@@ -662,14 +662,14 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                             child: const Text(
                               'Очистить',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -716,20 +716,26 @@ class _HomeBrand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = _HomeStyle.of(context);
-    return Center(
+    return Align(
+      alignment: Alignment.centerLeft,
       child: Text.rich(
-        textAlign: TextAlign.center,
+        textAlign: TextAlign.left,
         TextSpan(
           style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,
             height: 1.05,
-            letterSpacing: -0.5,
+            letterSpacing: -0.3,
           ),
           children: [
             TextSpan(
               text: 'Pin',
               style: TextStyle(color: style.text),
+            ),
+            const WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: SizedBox(width: 5, height: 1),
             ),
             TextSpan(
               text: 'Pic',
@@ -982,68 +988,72 @@ class _CategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = _HomeStyle.of(context);
     final showCount = count != null && count! > 0;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: style.card,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: style.border),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Icon(item.icon, color: item.color, size: 34),
-                    ),
-                    if (showCount)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: item.color.withValues(alpha: 0.22),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '$count',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: item.color,
-                              height: 1.1,
+    final dimmed = !showCount;
+    return Opacity(
+      opacity: dimmed ? 0.42 : 1,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: style.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: style.border),
+                  ),
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: Icon(item.icon, color: item.color, size: 34),
+                      ),
+                      if (showCount)
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: item.color.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '$count',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: item.color,
+                                height: 1.1,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item.label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                height: 1.15,
-                color: style.label,
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  height: 1.15,
+                  color: style.label,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1186,9 +1196,10 @@ class _MemoryStatusCard extends StatelessWidget {
     final busy = status == IndexingStatus.running || isRunning;
     final needsAction =
         status == IndexingStatus.failed || status == IndexingStatus.paused;
+    final compactReady = ready && !busy && !needsAction;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      padding: EdgeInsets.fromLTRB(16, compactReady ? 14 : 18, 16, compactReady ? 14 : 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: style.border),
@@ -1207,11 +1218,10 @@ class _MemoryStatusCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: compactReady ? 36 : 42,
+                height: compactReady ? 36 : 42,
                 decoration: BoxDecoration(
                   color: style.accent.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(14),
@@ -1221,7 +1231,7 @@ class _MemoryStatusCard extends StatelessWidget {
                       ? Icons.push_pin_rounded
                       : Icons.hourglass_top_rounded,
                   color: style.accent,
-                  size: 22,
+                  size: compactReady ? 18 : 22,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1232,15 +1242,17 @@ class _MemoryStatusCard extends StatelessWidget {
                     Text(
                       headline,
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: compactReady ? 16 : 18,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.3,
                         color: style.text,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      subtitle,
+                      compactReady
+                          ? '$rememberedLabel в памяти · $documentsLabel док.'
+                          : subtitle,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -1264,31 +1276,33 @@ class _MemoryStatusCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _MemoryMetric(
-                  value: rememberedLabel,
-                  label: 'в памяти',
+          if (!compactReady) ...[
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: _MemoryMetric(
+                    value: rememberedLabel,
+                    label: 'в памяти',
+                  ),
                 ),
-              ),
-              _MemoryMetricDivider(color: style.border),
-              Expanded(
-                child: _MemoryMetric(
-                  value: withTextLabel,
-                  label: 'с текстом',
+                _MemoryMetricDivider(color: style.border),
+                Expanded(
+                  child: _MemoryMetric(
+                    value: withTextLabel,
+                    label: 'с текстом',
+                  ),
                 ),
-              ),
-              _MemoryMetricDivider(color: style.border),
-              Expanded(
-                child: _MemoryMetric(
-                  value: documentsLabel,
-                  label: 'документов',
+                _MemoryMetricDivider(color: style.border),
+                Expanded(
+                  child: _MemoryMetric(
+                    value: documentsLabel,
+                    label: 'документов',
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           if (busy || needsAction || (!ready && progress > 0 && progress < 1)) ...[
             const SizedBox(height: 16),
             Row(
@@ -1319,31 +1333,68 @@ class _MemoryStatusCard extends StatelessWidget {
             ),
           ],
           if (sampleHint != null && onTrySample != null) ...[
-            const SizedBox(height: 14),
-            Text(
-              busy ? 'Уже нашлось — попробуйте' : 'Попробуйте найти',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: style.muted,
+            SizedBox(height: compactReady ? 12 : 14),
+            if (!compactReady)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  busy ? 'Уже нашлось — попробуйте' : 'Попробуйте найти',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: style.muted,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            ActionChip(
-              avatar: Icon(
-                Icons.search_rounded,
-                size: 18,
-                color: style.accent,
+            SizedBox(
+              width: double.infinity,
+              child: Material(
+                color: style.accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: onTrySample,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: style.accent.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search_rounded,
+                          size: 20,
+                          color: style.accent,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            sampleHint!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: style.text,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                          color: style.accent,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              label: Text(sampleHint!),
-              backgroundColor: style.accent.withValues(alpha: 0.12),
-              side: BorderSide(color: style.accent.withValues(alpha: 0.35)),
-              labelStyle: TextStyle(
-                color: style.text,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              onPressed: onTrySample,
             ),
           ],
         ],
@@ -1477,19 +1528,19 @@ class _RecentChip extends StatelessWidget {
             border: Border.all(color: style.border),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+            padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: style.text,
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 2),
                 GestureDetector(
                   onTap: onRemove,
                   behavior: HitTestBehavior.opaque,

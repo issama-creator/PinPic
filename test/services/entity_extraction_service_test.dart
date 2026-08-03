@@ -60,4 +60,36 @@ void main() {
     );
     expect(entities.expiresAt, isNull);
   });
+
+  test('QR wikipedia url becomes a confident site title', () {
+    final entities = extractor.extract(
+      ocrText: null,
+      category: CategoryEngine.qr,
+      qrPayload: 'http://en.m.wikipedia.org',
+    );
+    expect(entities.cardHeadline, 'Wikipedia');
+    expect(entities.url, contains('wikipedia'));
+  });
+
+  test('WIFI QR uses network name as title', () {
+    final entities = extractor.extract(
+      ocrText: null,
+      category: CategoryEngine.passwords,
+      qrPayload: 'WIFI:T:WPA;S:GrandmaNet;P:secret42;;',
+    );
+    expect(entities.wifiSsid, 'GrandmaNet');
+    expect(entities.wifiPassword, 'secret42');
+    expect(entities.cardHeadline, 'GrandmaNet');
+  });
+
+  test('prettyUrlLabel strips mobile language prefixes', () {
+    expect(
+      EntityExtractionService.prettyUrlLabel('https://en.m.wikipedia.org/wiki/A'),
+      'Wikipedia',
+    );
+    expect(
+      EntityExtractionService.prettyUrlLabel('https://www.github.com/x'),
+      'GitHub',
+    );
+  });
 }

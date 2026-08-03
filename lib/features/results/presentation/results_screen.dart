@@ -197,9 +197,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
               ),
             ),
           )
-        else
+        else if (_total > 1)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -209,7 +209,9 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                 ),
               ),
             ),
-          ),
+          )
+        else
+          const SizedBox(height: 8),
         Expanded(child: _buildResultSections(context)),
       ],
     );
@@ -259,7 +261,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
           return FactMemoryTile(
             photo: hit.photo,
             confidence: hit.confidence,
-            evidence: hit.evidence.take(2).toList(growable: false),
             onTap: () =>
                 context.push(RoutePaths.photoDetailsPath(hit.photo.mediaId)),
           );

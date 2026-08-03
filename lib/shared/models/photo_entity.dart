@@ -22,6 +22,9 @@ class PhotoEntity {
   /// Smart-card headline (IKEA, Договор, Wi‑Fi…).
   String? cardTitle;
 
+  /// User-chosen name — survives reindex; overrides auto [cardTitle].
+  String? customTitle;
+
   /// Smart-card body rows joined by newlines (amount, date, number…).
   String? cardBody;
 
@@ -113,6 +116,7 @@ class PhotoEntity {
     this.ocrText,
     this.summary,
     this.cardTitle,
+    this.customTitle,
     this.cardBody,
     this.entityTokens = const [],
     this.ocrKeywords = const [],

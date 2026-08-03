@@ -33,106 +33,111 @@ const PhotoEntitySchema = CollectionSchema(
       name: r'category',
       type: IsarType.string,
     ),
-    r'dateTaken': PropertySchema(
+    r'customTitle': PropertySchema(
       id: 4,
+      name: r'customTitle',
+      type: IsarType.string,
+    ),
+    r'dateTaken': PropertySchema(
+      id: 5,
       name: r'dateTaken',
       type: IsarType.dateTime,
     ),
     r'displayName': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'displayName',
       type: IsarType.string,
     ),
     r'entityTokens': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'entityTokens',
       type: IsarType.stringList,
     ),
     r'expiresAt': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'expiresAt',
       type: IsarType.dateTime,
     ),
-    r'hasFace': PropertySchema(id: 8, name: r'hasFace', type: IsarType.bool),
-    r'hasQr': PropertySchema(id: 9, name: r'hasQr', type: IsarType.bool),
-    r'hash': PropertySchema(id: 10, name: r'hash', type: IsarType.string),
-    r'height': PropertySchema(id: 11, name: r'height', type: IsarType.long),
+    r'hasFace': PropertySchema(id: 9, name: r'hasFace', type: IsarType.bool),
+    r'hasQr': PropertySchema(id: 10, name: r'hasQr', type: IsarType.bool),
+    r'hash': PropertySchema(id: 11, name: r'hash', type: IsarType.string),
+    r'height': PropertySchema(id: 12, name: r'height', type: IsarType.long),
     r'indexedAt': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'indexedAt',
       type: IsarType.dateTime,
     ),
     r'isFavorite': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'isFavorite',
       type: IsarType.bool,
     ),
-    r'isPinned': PropertySchema(id: 14, name: r'isPinned', type: IsarType.bool),
+    r'isPinned': PropertySchema(id: 15, name: r'isPinned', type: IsarType.bool),
     r'keywords': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'keywords',
       type: IsarType.stringList,
     ),
     r'latitude': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'latitude',
       type: IsarType.double,
     ),
     r'longitude': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'longitude',
       type: IsarType.double,
     ),
-    r'mediaId': PropertySchema(id: 18, name: r'mediaId', type: IsarType.string),
+    r'mediaId': PropertySchema(id: 19, name: r'mediaId', type: IsarType.string),
     r'mimeType': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'mimeType',
       type: IsarType.string,
     ),
     r'modifiedAt': PropertySchema(
-      id: 20,
+      id: 21,
       name: r'modifiedAt',
       type: IsarType.dateTime,
     ),
     r'needsDeepOcr': PropertySchema(
-      id: 21,
+      id: 22,
       name: r'needsDeepOcr',
       type: IsarType.bool,
     ),
     r'objects': PropertySchema(
-      id: 22,
+      id: 23,
       name: r'objects',
       type: IsarType.stringList,
     ),
     r'ocrKeywords': PropertySchema(
-      id: 23,
+      id: 24,
       name: r'ocrKeywords',
       type: IsarType.stringList,
     ),
-    r'ocrText': PropertySchema(id: 24, name: r'ocrText', type: IsarType.string),
-    r'path': PropertySchema(id: 25, name: r'path', type: IsarType.string),
+    r'ocrText': PropertySchema(id: 25, name: r'ocrText', type: IsarType.string),
+    r'path': PropertySchema(id: 26, name: r'path', type: IsarType.string),
     r'qrPayload': PropertySchema(
-      id: 26,
+      id: 27,
       name: r'qrPayload',
       type: IsarType.string,
     ),
     r'semanticEmbedding': PropertySchema(
-      id: 27,
+      id: 28,
       name: r'semanticEmbedding',
       type: IsarType.doubleList,
     ),
     r'sizeBytes': PropertySchema(
-      id: 28,
+      id: 29,
       name: r'sizeBytes',
       type: IsarType.long,
     ),
-    r'summary': PropertySchema(id: 29, name: r'summary', type: IsarType.string),
+    r'summary': PropertySchema(id: 30, name: r'summary', type: IsarType.string),
     r'visionKeywords': PropertySchema(
-      id: 30,
+      id: 31,
       name: r'visionKeywords',
       type: IsarType.stringList,
     ),
-    r'width': PropertySchema(id: 31, name: r'width', type: IsarType.long),
+    r'width': PropertySchema(id: 32, name: r'width', type: IsarType.long),
   },
 
   estimateSize: _photoEntityEstimateSize,
@@ -390,6 +395,12 @@ int _photoEntityEstimateSize(
     }
   }
   {
+    final value = object.customTitle;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.displayName;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -471,34 +482,35 @@ void _photoEntitySerialize(
   writer.writeString(offsets[1], object.cardBody);
   writer.writeString(offsets[2], object.cardTitle);
   writer.writeString(offsets[3], object.category);
-  writer.writeDateTime(offsets[4], object.dateTaken);
-  writer.writeString(offsets[5], object.displayName);
-  writer.writeStringList(offsets[6], object.entityTokens);
-  writer.writeDateTime(offsets[7], object.expiresAt);
-  writer.writeBool(offsets[8], object.hasFace);
-  writer.writeBool(offsets[9], object.hasQr);
-  writer.writeString(offsets[10], object.hash);
-  writer.writeLong(offsets[11], object.height);
-  writer.writeDateTime(offsets[12], object.indexedAt);
-  writer.writeBool(offsets[13], object.isFavorite);
-  writer.writeBool(offsets[14], object.isPinned);
-  writer.writeStringList(offsets[15], object.keywords);
-  writer.writeDouble(offsets[16], object.latitude);
-  writer.writeDouble(offsets[17], object.longitude);
-  writer.writeString(offsets[18], object.mediaId);
-  writer.writeString(offsets[19], object.mimeType);
-  writer.writeDateTime(offsets[20], object.modifiedAt);
-  writer.writeBool(offsets[21], object.needsDeepOcr);
-  writer.writeStringList(offsets[22], object.objects);
-  writer.writeStringList(offsets[23], object.ocrKeywords);
-  writer.writeString(offsets[24], object.ocrText);
-  writer.writeString(offsets[25], object.path);
-  writer.writeString(offsets[26], object.qrPayload);
-  writer.writeDoubleList(offsets[27], object.semanticEmbedding);
-  writer.writeLong(offsets[28], object.sizeBytes);
-  writer.writeString(offsets[29], object.summary);
-  writer.writeStringList(offsets[30], object.visionKeywords);
-  writer.writeLong(offsets[31], object.width);
+  writer.writeString(offsets[4], object.customTitle);
+  writer.writeDateTime(offsets[5], object.dateTaken);
+  writer.writeString(offsets[6], object.displayName);
+  writer.writeStringList(offsets[7], object.entityTokens);
+  writer.writeDateTime(offsets[8], object.expiresAt);
+  writer.writeBool(offsets[9], object.hasFace);
+  writer.writeBool(offsets[10], object.hasQr);
+  writer.writeString(offsets[11], object.hash);
+  writer.writeLong(offsets[12], object.height);
+  writer.writeDateTime(offsets[13], object.indexedAt);
+  writer.writeBool(offsets[14], object.isFavorite);
+  writer.writeBool(offsets[15], object.isPinned);
+  writer.writeStringList(offsets[16], object.keywords);
+  writer.writeDouble(offsets[17], object.latitude);
+  writer.writeDouble(offsets[18], object.longitude);
+  writer.writeString(offsets[19], object.mediaId);
+  writer.writeString(offsets[20], object.mimeType);
+  writer.writeDateTime(offsets[21], object.modifiedAt);
+  writer.writeBool(offsets[22], object.needsDeepOcr);
+  writer.writeStringList(offsets[23], object.objects);
+  writer.writeStringList(offsets[24], object.ocrKeywords);
+  writer.writeString(offsets[25], object.ocrText);
+  writer.writeString(offsets[26], object.path);
+  writer.writeString(offsets[27], object.qrPayload);
+  writer.writeDoubleList(offsets[28], object.semanticEmbedding);
+  writer.writeLong(offsets[29], object.sizeBytes);
+  writer.writeString(offsets[30], object.summary);
+  writer.writeStringList(offsets[31], object.visionKeywords);
+  writer.writeLong(offsets[32], object.width);
 }
 
 PhotoEntity _photoEntityDeserialize(
@@ -512,35 +524,36 @@ PhotoEntity _photoEntityDeserialize(
   object.cardBody = reader.readStringOrNull(offsets[1]);
   object.cardTitle = reader.readStringOrNull(offsets[2]);
   object.category = reader.readStringOrNull(offsets[3]);
-  object.dateTaken = reader.readDateTimeOrNull(offsets[4]);
-  object.displayName = reader.readStringOrNull(offsets[5]);
-  object.entityTokens = reader.readStringList(offsets[6]) ?? [];
-  object.expiresAt = reader.readDateTimeOrNull(offsets[7]);
-  object.hasFace = reader.readBool(offsets[8]);
-  object.hasQr = reader.readBool(offsets[9]);
-  object.hash = reader.readString(offsets[10]);
-  object.height = reader.readLong(offsets[11]);
+  object.customTitle = reader.readStringOrNull(offsets[4]);
+  object.dateTaken = reader.readDateTimeOrNull(offsets[5]);
+  object.displayName = reader.readStringOrNull(offsets[6]);
+  object.entityTokens = reader.readStringList(offsets[7]) ?? [];
+  object.expiresAt = reader.readDateTimeOrNull(offsets[8]);
+  object.hasFace = reader.readBool(offsets[9]);
+  object.hasQr = reader.readBool(offsets[10]);
+  object.hash = reader.readString(offsets[11]);
+  object.height = reader.readLong(offsets[12]);
   object.id = id;
-  object.indexedAt = reader.readDateTime(offsets[12]);
-  object.isFavorite = reader.readBool(offsets[13]);
-  object.isPinned = reader.readBool(offsets[14]);
-  object.keywords = reader.readStringList(offsets[15]) ?? [];
-  object.latitude = reader.readDoubleOrNull(offsets[16]);
-  object.longitude = reader.readDoubleOrNull(offsets[17]);
-  object.mediaId = reader.readString(offsets[18]);
-  object.mimeType = reader.readStringOrNull(offsets[19]);
-  object.modifiedAt = reader.readDateTimeOrNull(offsets[20]);
-  object.needsDeepOcr = reader.readBool(offsets[21]);
-  object.objects = reader.readStringList(offsets[22]) ?? [];
-  object.ocrKeywords = reader.readStringList(offsets[23]) ?? [];
-  object.ocrText = reader.readStringOrNull(offsets[24]);
-  object.path = reader.readString(offsets[25]);
-  object.qrPayload = reader.readStringOrNull(offsets[26]);
-  object.semanticEmbedding = reader.readDoubleList(offsets[27]) ?? [];
-  object.sizeBytes = reader.readLong(offsets[28]);
-  object.summary = reader.readStringOrNull(offsets[29]);
-  object.visionKeywords = reader.readStringList(offsets[30]) ?? [];
-  object.width = reader.readLong(offsets[31]);
+  object.indexedAt = reader.readDateTime(offsets[13]);
+  object.isFavorite = reader.readBool(offsets[14]);
+  object.isPinned = reader.readBool(offsets[15]);
+  object.keywords = reader.readStringList(offsets[16]) ?? [];
+  object.latitude = reader.readDoubleOrNull(offsets[17]);
+  object.longitude = reader.readDoubleOrNull(offsets[18]);
+  object.mediaId = reader.readString(offsets[19]);
+  object.mimeType = reader.readStringOrNull(offsets[20]);
+  object.modifiedAt = reader.readDateTimeOrNull(offsets[21]);
+  object.needsDeepOcr = reader.readBool(offsets[22]);
+  object.objects = reader.readStringList(offsets[23]) ?? [];
+  object.ocrKeywords = reader.readStringList(offsets[24]) ?? [];
+  object.ocrText = reader.readStringOrNull(offsets[25]);
+  object.path = reader.readString(offsets[26]);
+  object.qrPayload = reader.readStringOrNull(offsets[27]);
+  object.semanticEmbedding = reader.readDoubleList(offsets[28]) ?? [];
+  object.sizeBytes = reader.readLong(offsets[29]);
+  object.summary = reader.readStringOrNull(offsets[30]);
+  object.visionKeywords = reader.readStringList(offsets[31]) ?? [];
+  object.width = reader.readLong(offsets[32]);
   return object;
 }
 
@@ -560,60 +573,62 @@ P _photoEntityDeserializeProp<P>(
     case 3:
       return (reader.readStringOrNull(offset)) as P;
     case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 5:
       return (reader.readStringOrNull(offset)) as P;
-    case 6:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 7:
+    case 5:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readStringList(offset) ?? []) as P;
     case 8:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 9:
       return (reader.readBool(offset)) as P;
     case 10:
-      return (reader.readString(offset)) as P;
-    case 11:
-      return (reader.readLong(offset)) as P;
-    case 12:
-      return (reader.readDateTime(offset)) as P;
-    case 13:
       return (reader.readBool(offset)) as P;
+    case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readLong(offset)) as P;
+    case 13:
+      return (reader.readDateTime(offset)) as P;
     case 14:
       return (reader.readBool(offset)) as P;
     case 15:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 16:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 17:
       return (reader.readDoubleOrNull(offset)) as P;
     case 18:
-      return (reader.readString(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 19:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 20:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 21:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 22:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 23:
       return (reader.readStringList(offset) ?? []) as P;
     case 24:
-      return (reader.readStringOrNull(offset)) as P;
-    case 25:
-      return (reader.readString(offset)) as P;
-    case 26:
-      return (reader.readStringOrNull(offset)) as P;
-    case 27:
-      return (reader.readDoubleList(offset) ?? []) as P;
-    case 28:
-      return (reader.readLong(offset)) as P;
-    case 29:
-      return (reader.readStringOrNull(offset)) as P;
-    case 30:
       return (reader.readStringList(offset) ?? []) as P;
+    case 25:
+      return (reader.readStringOrNull(offset)) as P;
+    case 26:
+      return (reader.readString(offset)) as P;
+    case 27:
+      return (reader.readStringOrNull(offset)) as P;
+    case 28:
+      return (reader.readDoubleList(offset) ?? []) as P;
+    case 29:
+      return (reader.readLong(offset)) as P;
+    case 30:
+      return (reader.readStringOrNull(offset)) as P;
     case 31:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 32:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3120,6 +3135,165 @@ extension PhotoEntityQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'category', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'customTitle'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'customTitle'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'customTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'customTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'customTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'customTitle',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'customTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'customTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'customTitle',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'customTitle',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'customTitle', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  customTitleIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'customTitle', value: ''),
       );
     });
   }
@@ -6276,6 +6450,18 @@ extension PhotoEntityQuerySortBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByCustomTitle() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customTitle', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByCustomTitleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customTitle', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByDateTaken() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateTaken', Sort.asc);
@@ -6592,6 +6778,18 @@ extension PhotoEntityQuerySortThenBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByCustomTitle() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customTitle', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByCustomTitleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customTitle', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByDateTaken() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateTaken', Sort.asc);
@@ -6904,6 +7102,14 @@ extension PhotoEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByCustomTitle({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'customTitle', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByDateTaken() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'dateTaken');
@@ -7119,6 +7325,12 @@ extension PhotoEntityQueryProperty
   QueryBuilder<PhotoEntity, String?, QQueryOperations> categoryProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'category');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, String?, QQueryOperations> customTitleProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'customTitle');
     });
   }
 

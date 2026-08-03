@@ -231,7 +231,19 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SmartMemoryCard(photo: photo, showActions: true),
+                SmartMemoryCard(
+                  photo: photo,
+                  showActions: true,
+                  onRenameTitle: (title) async {
+                    await ref
+                        .read(photoRepositoryProvider)
+                        .setCustomTitle(widget.mediaId, title);
+                    ref.invalidate(_photoByIdProvider(widget.mediaId));
+                    ref.invalidate(pinnedPhotosProvider);
+                    ref.invalidate(favoritesProvider);
+                    ref.read(searchServiceProvider).invalidateCaches();
+                  },
+                ),
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,

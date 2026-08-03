@@ -195,6 +195,7 @@ class PhotoRepository {
           photo.id = existing.id;
           photo.isFavorite = existing.isFavorite;
           photo.isPinned = existing.isPinned;
+          photo.customTitle = existing.customTitle;
         }
         await _isar.photos.put(photo);
       });
@@ -220,6 +221,7 @@ class PhotoRepository {
             photo.id = existing.id;
             photo.isFavorite = existing.isFavorite;
             photo.isPinned = existing.isPinned;
+            photo.customTitle = existing.customTitle;
           }
         }
         await _isar.photos.putAll(photos);
@@ -252,6 +254,21 @@ class PhotoRepository {
           .findFirst();
       if (photo == null) return;
       photo.isPinned = isPinned;
+      await _isar.photos.put(photo);
+    });
+  }
+
+  /// Empty / null clears the user rename and falls back to auto title.
+  Future<void> setCustomTitle(String mediaId, String? title) async {
+    await _isar.writeTxn(() async {
+      final photo = await _isar.photos
+          .filter()
+          .mediaIdEqualTo(mediaId)
+          .findFirst();
+      if (photo == null) return;
+      final trimmed = title?.trim();
+      photo.customTitle =
+          (trimmed == null || trimmed.isEmpty) ? null : trimmed;
       await _isar.photos.put(photo);
     });
   }

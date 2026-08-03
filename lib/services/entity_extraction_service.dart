@@ -13,6 +13,7 @@ class ExtractedEntities {
     this.url,
     this.cardTail,
     this.wifiPassword,
+    this.wifiSsid,
     this.vin,
     this.plate,
     this.person,
@@ -31,6 +32,7 @@ class ExtractedEntities {
   final String? url;
   final String? cardTail;
   final String? wifiPassword;
+  final String? wifiSsid;
   final String? vin;
   final String? plate;
   final String? person;
@@ -47,25 +49,25 @@ class ExtractedEntities {
       url == null &&
       cardTail == null &&
       wifiPassword == null &&
+      wifiSsid == null &&
       vin == null &&
       plate == null &&
       person == null;
 
   /// Compact one-line summary for grids.
   String? get summaryLine {
+    final urlLabel = EntityExtractionService.prettyUrlLabel(url);
     final parts = <String>[
-      if (brand != null) brand!,
-      if (title != null &&
-          (brand == null ||
-              !title!.toLowerCase().contains(brand!.toLowerCase())))
-        title!,
+      if (cardHeadline != null) cardHeadline!,
       if (person != null) person!,
       if (amount != null) amount!,
       if (docNumber != null) docNumber!,
-      if (wifiPassword != null) 'Wi‑Fi · $wifiPassword',
+      if (wifiSsid != null && cardHeadline != wifiSsid) wifiSsid!,
+      if (wifiPassword != null) wifiPassword!,
       if (cardTail != null) cardTail!,
       if (phone != null) phone!,
       if (email != null) email!,
+      if (urlLabel != null && cardHeadline != urlLabel) urlLabel,
       if (date != null) date!,
     ];
     final unique = <String>[];
@@ -80,16 +82,19 @@ class ExtractedEntities {
 
   /// Multi-line smart card body (title separate).
   List<String> get cardRows {
+    final urlLabel = EntityExtractionService.prettyUrlLabel(url);
     final rows = <String>[
       if (person != null) person!,
       if (amount != null) amount!,
       if (docNumber != null) docNumber!,
       if (date != null) date!,
       if (cardTail != null) cardTail!,
+      if (wifiSsid != null) wifiSsid!,
       if (wifiPassword != null) wifiPassword!,
       if (phone != null) phone!,
       if (email != null) email!,
-      if (url != null) url!,
+      if (urlLabel != null) urlLabel,
+      if (url != null && urlLabel == null) url!,
       if (vin != null) 'VIN $vin',
       if (plate != null) plate!,
     ];
@@ -102,11 +107,56 @@ class ExtractedEntities {
     return unique;
   }
 
+  /// Short confident title for cards — never invents, only formats facts.
   String? get cardHeadline {
-    if (brand != null) return brand;
-    if (title != null) return title;
-    if (person != null) return person;
+    final brandLabel = brand?.trim();
+    final isWifiBrand =
+        brandLabel != null &&
+        (brandLabel.toLowerCase() == 'wi-fi' ||
+            brandLabel.toLowerCase() == 'wifi');
+
+    if (wifiSsid != null && wifiSsid!.trim().isNotEmpty) {
+      return wifiSsid!.trim();
+    }
+    if (brandLabel != null && brandLabel.isNotEmpty && !isWifiBrand) {
+      return brandLabel;
+    }
+    if (wifiPassword != null) return 'Wi‑Fi';
+
+    final urlLabel = EntityExtractionService.prettyUrlLabel(url);
+    if (urlLabel != null) return urlLabel;
+
+    if (person != null && person!.trim().isNotEmpty) return person!.trim();
+
+    final titleLabel = title?.trim();
+    if (titleLabel != null &&
+        titleLabel.isNotEmpty &&
+        !_isBareCategoryLabel(titleLabel)) {
+      return titleLabel;
+    }
+    if (amount != null) return 'Чек';
+    if (titleLabel != null && titleLabel.isNotEmpty) return titleLabel;
     return null;
+  }
+
+  static bool _isBareCategoryLabel(String value) {
+    const bare = {
+      'qr',
+      'чеки',
+      'чек',
+      'пароли',
+      'пароль',
+      'документы',
+      'документ',
+      'билеты',
+      'билет',
+      'паспорта',
+      'паспорт',
+      'гарантии',
+      'визитки',
+      'скриншоты',
+    };
+    return bare.contains(value.toLowerCase().trim());
   }
 
   /// Tokens used for exact search: 4990, phones, emails, contract numbers…
@@ -133,6 +183,7 @@ class ExtractedEntities {
     add(url);
     add(cardTail?.replaceAll('•', '').replaceAll(' ', ''));
     add(wifiPassword);
+    add(wifiSsid);
     add(vin);
     add(plate);
     add(person);
@@ -168,8 +219,12 @@ class EntityExtractionService {
     final amountMatch = _moneyMatch(text);
     final phone = _phone(text);
     final email = _email(text);
-    final url = _url(text) ?? _url(qrPayload);
-    final wifi = _wifiPassword(text);
+    final wifiQr = _wifiFromQr(qrPayload);
+    final url = _url(text) ??
+        _url(qrPayload) ??
+        (wifiQr == null ? _urlFromLooseQr(qrPayload) : null);
+    final wifi = _wifiPassword(text) ?? wifiQr?.password;
+    final ssid = wifiQr?.ssid ?? _wifiSsid(text);
     final cardTail = _cardTail(text);
     final vin = _vin(text);
     final plate = _plate(text);
@@ -187,10 +242,75 @@ class EntityExtractionService {
       url: url,
       cardTail: cardTail,
       wifiPassword: wifi,
+      wifiSsid: ssid,
       vin: vin,
       plate: plate,
       person: _personName(text, lines, category),
     );
+  }
+
+  /// Confident display name from a URL host — no guessing beyond the host.
+  static String? prettyUrlLabel(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return null;
+    final trimmed = rawUrl.trim();
+    Uri? uri;
+    try {
+      uri = Uri.parse(
+        trimmed.contains('://') ? trimmed : 'https://$trimmed',
+      );
+    } catch (_) {
+      return null;
+    }
+    var host = uri.host.toLowerCase().trim();
+    if (host.isEmpty) return null;
+    host = host.replaceFirst(RegExp(r'^www\.'), '');
+    // Strip common mobile / language prefixes: en.m.wikipedia.org → wikipedia.org
+    while (true) {
+      final next = host.replaceFirst(
+        RegExp(r'^(m|mobile|www|en|ru|de|fr|es|it|pt|uk|zh)\.'),
+        '',
+      );
+      if (next == host) break;
+      host = next;
+    }
+
+    const known = <String, String>{
+      'wikipedia.org': 'Wikipedia',
+      'youtube.com': 'YouTube',
+      'youtu.be': 'YouTube',
+      'google.com': 'Google',
+      'maps.google.com': 'Google Maps',
+      'goo.gl': 'Google',
+      't.me': 'Telegram',
+      'telegram.me': 'Telegram',
+      'wa.me': 'WhatsApp',
+      'whatsapp.com': 'WhatsApp',
+      'instagram.com': 'Instagram',
+      'facebook.com': 'Facebook',
+      'fb.com': 'Facebook',
+      'vk.com': 'VK',
+      'tiktok.com': 'TikTok',
+      'github.com': 'GitHub',
+      'apple.com': 'Apple',
+      'microsoft.com': 'Microsoft',
+      'amazon.com': 'Amazon',
+      'ozon.ru': 'Ozon',
+      'wildberries.ru': 'Wildberries',
+      'avito.ru': 'Avito',
+      'yandex.ru': 'Яндекс',
+      'ya.ru': 'Яндекс',
+    };
+    for (final entry in known.entries) {
+      if (host == entry.key || host.endsWith('.${entry.key}')) {
+        return entry.value;
+      }
+    }
+
+    final labels = host.split('.').where((p) => p.isNotEmpty).toList();
+    if (labels.length < 2) return host;
+    final name = labels[labels.length - 2];
+    if (name.length < 2) return host;
+    return '${name[0].toUpperCase()}${name.substring(1)}';
   }
 
   String? _brand(String text) {
@@ -288,18 +408,73 @@ class EntityExtractionService {
   String? _url(String? text) {
     if (text == null || text.trim().isEmpty) return null;
     final match = RegExp(
-      r'https?://[^\s]+|www\.[^\s]+',
+      r'https?://[^\s<>"{}|\\^`\[\]]+|www\.[^\s<>"{}|\\^`\[\]]+',
       caseSensitive: false,
     ).firstMatch(text);
-    return match?.group(0);
+    var value = match?.group(0);
+    if (value == null) return null;
+    // Trim trailing punctuation often glued by OCR.
+    while (value!.isNotEmpty &&
+        (value.endsWith(')') ||
+            value.endsWith(',') ||
+            value.endsWith('.') ||
+            value.endsWith(']') ||
+            value.endsWith('"'))) {
+      value = value.substring(0, value.length - 1);
+    }
+    return value;
+  }
+
+  /// Bare domain / path QR payloads without scheme.
+  String? _urlFromLooseQr(String? payload) {
+    if (payload == null) return null;
+    final text = payload.trim();
+    if (text.isEmpty || text.toUpperCase().startsWith('WIFI:')) return null;
+    if (_url(text) != null) return _url(text);
+    if (RegExp(
+      r'^[a-z0-9][a-z0-9.\-]*\.[a-z]{2,}(/[\S]*)?$',
+      caseSensitive: false,
+    ).hasMatch(text)) {
+      return text.contains('://') ? text : 'https://$text';
+    }
+    return null;
+  }
+
+  ({String? ssid, String? password})? _wifiFromQr(String? payload) {
+    if (payload == null) return null;
+    final text = payload.trim();
+    if (!text.toUpperCase().startsWith('WIFI:')) return null;
+    String? field(String key) {
+      final match = RegExp(
+        '$key:([^;]*)',
+        caseSensitive: false,
+      ).firstMatch(text);
+      final value = match?.group(1)?.trim();
+      if (value == null || value.isEmpty) return null;
+      return value;
+    }
+
+    return (ssid: field('S'), password: field('P'));
+  }
+
+  String? _wifiSsid(String text) {
+    final match = RegExp(
+      r'(?:ssid|сеть|network|имя сети)\s*[:\-–]?\s*([^\r\n]{2,40})',
+      caseSensitive: false,
+    ).firstMatch(text);
+    final value = match?.group(1)?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value.replaceAll(RegExp(r'[\"«»]'), '').trim();
   }
 
   String? _wifiPassword(String text) {
     final match = RegExp(
-      r'(?:password|пароль|pass\s*code|пин)\s*[:\-–]?\s*([A-Za-z0-9\-_]{6,})',
+      r'(?:password|пароль|pass\s*code|пин|pass)\s*[:\-–]?\s*([^\s]{6,48})',
       caseSensitive: false,
     ).firstMatch(text);
-    return match?.group(1);
+    final value = match?.group(1)?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value.replaceFirst(RegExp(r'[),.;]+$'), '');
   }
 
   String? _cardTail(String text) {
