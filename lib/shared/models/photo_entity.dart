@@ -85,6 +85,10 @@ class PhotoEntity {
   @Index()
   bool hasFace = false;
 
+  /// Fast pass queued this photo for PP-OCR; survives stop/crash until deep done.
+  @Index()
+  bool needsDeepOcr = false;
+
   String? qrPayload;
 
   /// Expiry / valid-until date extracted from OCR when present.
@@ -126,6 +130,7 @@ class PhotoEntity {
     this.isPinned = false,
     this.hasQr = false,
     this.hasFace = false,
+    this.needsDeepOcr = false,
     this.qrPayload,
     this.expiresAt,
     this.modifiedAt,

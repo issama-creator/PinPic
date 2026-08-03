@@ -120,7 +120,8 @@ class SearchService {
 
     final memoryQuery = _parser.parse(query);
     final cacheKey =
-        '${memoryQuery.cleaned}|${category ?? ''}|$favoritesOnly';
+        '${memoryQuery.cleaned}|${memoryQuery.dateFrom}|${memoryQuery.dateTo}|'
+        '${category ?? ''}|$favoritesOnly';
     var cached = _resultCache[cacheKey];
     if (cached == null || !cached.isFresh) {
       final ranked = await _buildRankedResults(
@@ -244,6 +245,29 @@ class SearchService {
       candidates = merged.values.toList(growable: false);
     }
 
+    // QR intent: also pull every photo where a code was actually decoded,
+    // even if category was overwritten (e.g. ticket + QR → Билеты).
+    final wantsQr = expandedTokens.any(
+      (token) =>
+          token == 'qr' ||
+          token.startsWith('qr') ||
+          token.contains('qrкод') ||
+          token.contains('qr-код') ||
+          token == 'barcode' ||
+          token == 'штрихкод',
+    );
+    if (wantsQr && category == null) {
+      final withQr = await _photos.getWithQr(limit: 200);
+      final merged = <String, PhotoEntity>{
+        for (final photo in candidates) photo.mediaId: photo,
+      };
+      for (final photo in withQr) {
+        if (favoritesOnly && !photo.isFavorite) continue;
+        merged[photo.mediaId] = photo;
+      }
+      candidates = merged.values.toList(growable: false);
+    }
+
     // Fuzzy recall when empty or thin — user typed from imperfect memory.
     final needsFuzzy =
         originalTokens.isNotEmpty &&
@@ -292,6 +316,31 @@ class SearchService {
       candidates = merged.values.toList(growable: false);
     }
 
+    // Soft date filter: keep dated hits inside the remembered window.
+    if (memoryQuery.hasDateHint) {
+      final from = memoryQuery.dateFrom;
+      final to = memoryQuery.dateTo;
+      final dated = <PhotoEntity>[];
+      final undated = <PhotoEntity>[];
+      for (final photo in candidates) {
+        final taken = photo.dateTaken;
+        if (taken == null) {
+          undated.add(photo);
+          continue;
+        }
+        final inRange =
+            (from == null || !taken.isBefore(from)) &&
+            (to == null || taken.isBefore(to));
+        if (inRange) {
+          dated.add(photo);
+        }
+      }
+      // Prefer dated matches; keep a few undated only if nothing dated hit.
+      candidates = dated.isNotEmpty
+          ? dated
+          : undated.take(12).toList(growable: false);
+    }
+
     final hits = <SearchHit>[];
     final rankingQuery = memoryQuery.cleaned.isNotEmpty
         ? memoryQuery.cleaned
@@ -311,10 +360,26 @@ class SearchService {
       if (rank.score <= 0 && originalTokens.isNotEmpty) {
         continue;
       }
+      var score = rank.score;
+      // Amount memory: boost when query digits appear in entity/OCR signals.
+      if (memoryQuery.digitTokens.isNotEmpty) {
+        final hay = [
+          ...photo.entityTokens,
+          ...photo.ocrKeywords,
+          photo.ocrText ?? '',
+          photo.cardBody ?? '',
+        ].join(' ').replaceAll(RegExp(r'\s+'), '');
+        for (final digit in memoryQuery.digitTokens) {
+          if (hay.contains(digit)) {
+            score += 8;
+            break;
+          }
+        }
+      }
       hits.add(
         SearchHit(
           photo: photo,
-          score: rank.score,
+          score: score,
           confidence: rank.confidence,
           reason: rank.reason,
           evidence: rank.evidence,

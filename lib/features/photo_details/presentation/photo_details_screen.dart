@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:pinpic/core/providers/core_providers.dart';
+import 'package:pinpic/services/media_open_service.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
 import 'package:pinpic/theme/app_colors.dart';
 import 'package:pinpic/widgets/app_scaffold.dart';
@@ -32,6 +33,44 @@ class PhotoDetailsScreen extends ConsumerStatefulWidget {
 
 class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
   bool _rereading = false;
+  final _mediaOpen = MediaOpenService();
+
+  Future<File?> _resolveOriginalFile(PhotoEntity photo) async {
+    final direct = File(photo.path);
+    if (await direct.exists()) return direct;
+
+    final asset = await AssetEntity.fromId(widget.mediaId);
+    if (asset == null) return null;
+    return await asset.originFile ?? await asset.file;
+  }
+
+  Future<void> _openOriginal(PhotoEntity photo) async {
+    // Prefer the system gallery / image viewer.
+    final openedInGallery = await _mediaOpen.openInGallery(
+      mediaId: widget.mediaId,
+      path: photo.path,
+    );
+    if (!mounted) return;
+    if (openedInGallery) return;
+
+    // Fallback: in-app viewer if no external app handled the Intent.
+    final file = await _resolveOriginalFile(photo);
+    if (!mounted) return;
+    final exists = file != null && await file.exists();
+    if (!mounted) return;
+    if (!exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось открыть оригинал')),
+      );
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => _FullScreenOriginal(path: file.path),
+      ),
+    );
+  }
 
   Future<void> _reread() async {
     if (_rereading) return;
@@ -137,16 +176,57 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: PhotoThumbnail(
-                      mediaId: widget.mediaId,
-                      filePath: photo.path,
-                      width: 1200,
-                      height: 1200,
-                      fit: BoxFit.contain,
+                GestureDetector(
+                  onTap: () => _openOriginal(photo),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          PhotoThumbnail(
+                            mediaId: widget.mediaId,
+                            filePath: photo.path,
+                            width: 1200,
+                            height: 1200,
+                            fit: BoxFit.contain,
+                          ),
+                          Positioned(
+                            right: 10,
+                            bottom: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.open_in_full_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Открыть',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -275,9 +355,11 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () async {
-                          final file = File(photo.path);
-                          if (!await file.exists()) {
-                            if (!context.mounted) return;
+                          final file = await _resolveOriginalFile(photo);
+                          if (!context.mounted) return;
+                          final exists = file != null && await file.exists();
+                          if (!context.mounted) return;
+                          if (!exists) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Файл недоступен'),
@@ -286,7 +368,7 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
                             return;
                           }
                           await SharePlus.instance.share(
-                            ShareParams(files: [XFile(photo.path)]),
+                            ShareParams(files: [XFile(file.path)]),
                           );
                         },
                         icon: const Icon(Icons.share_rounded),
@@ -320,21 +402,7 @@ class _PhotoDetailsScreenState extends ConsumerState<PhotoDetailsScreen> {
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: () async {
-                          final asset =
-                              await AssetEntity.fromId(widget.mediaId);
-                          await asset?.file;
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                asset == null
-                                    ? 'Не удалось открыть оригинал'
-                                    : 'Оригинал: ${photo.path}',
-                              ),
-                            ),
-                          );
-                        },
+                        onPressed: () => _openOriginal(photo),
                         child: const Text('Открыть оригинал'),
                       ),
                     ),
@@ -424,6 +492,42 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FullScreenOriginal extends StatelessWidget {
+  const _FullScreenOriginal({required this.path});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Оригинал'),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 5,
+          child: Image.file(
+            File(path),
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'Не удалось показать файл',
+                style: TextStyle(color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,34 +1,53 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
-import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:image/image.dart' as img;
 import 'package:pinpic/services/deep_ocr_bridge.dart';
+import 'package:pinpic/services/fast_image_prep.dart';
 
 /// Fast ML Kit Latin OCR + offline PP-OCRv5 Cyrillic deep pass on Android.
 ///
-/// ML Kit has no Cyrillic script option. The deep pass (NCNN PaddleOCR v5
-/// with the eslav dictionary) fills that gap for tickets, passports and
-/// other Russian document photos. Indexing keeps the two passes separate so
-/// search becomes available before deep OCR finishes.
-///
-/// Deep OCR on Android also runs contrast/upscale preprocess and retries
-/// rotated frames when the first pass looks weak.
+/// Indexing keeps the two passes separate so search becomes available before
+/// deep OCR finishes. A small pool of recognizers lets the indexer process
+/// multiple photos without serializing every ML Kit call.
 class OcrService {
-  OcrService({DeepOcrBridge? deepOcr})
-    : _recognizer = TextRecognizer(script: TextRecognitionScript.latin),
-      _deepOcr = deepOcr ?? DeepOcrBridge();
+  OcrService({DeepOcrBridge? deepOcr, int poolSize = 2})
+    : _recognizers = List<TextRecognizer>.generate(
+        poolSize.clamp(1, 4),
+        (_) => TextRecognizer(script: TextRecognitionScript.latin),
+        growable: false,
+      ),
+      _deepOcr = deepOcr ?? DeepOcrBridge() {
+    _available.addAll(List<int>.generate(_recognizers.length, (i) => i));
+  }
 
-  final TextRecognizer _recognizer;
+  final List<TextRecognizer> _recognizers;
   final DeepOcrBridge _deepOcr;
+  final List<int> _available = <int>[];
+  final Queue<Completer<int>> _waiters = Queue<Completer<int>>();
 
-  /// Long edge for the fast ML Kit pass — full 12MP frames are wasted work.
-  static const fastOcrMaxEdge = 1280;
+  static const fastOcrMaxEdge = FastImagePrep.maxEdge;
 
-  /// Legacy complete OCR API. Indexing uses the two explicit passes below so
-  /// the quick index can become searchable before deep OCR finishes.
+  Future<int> _acquire() {
+    if (_available.isNotEmpty) {
+      return Future<int>.value(_available.removeLast());
+    }
+    final gate = Completer<int>();
+    _waiters.add(gate);
+    return gate.future;
+  }
+
+  void _release(int index) {
+    if (_waiters.isNotEmpty) {
+      _waiters.removeFirst().complete(index);
+    } else {
+      _available.add(index);
+    }
+  }
+
+  /// Legacy complete OCR API.
   Future<String?> extractText(String path) async {
     final fastText = await extractFastText(path);
     if (!needsDeepText(fastText)) return fastText;
@@ -36,67 +55,62 @@ class OcrService {
     return mergeTexts(fastText, deepText);
   }
 
-  /// Low-latency Latin/digits OCR. Enough for many receipts and filenames.
-  Future<String?> extractFastText(String path) async {
-    final file = File(path);
-    if (!await file.exists()) return null;
+  /// Low-latency Latin/digits OCR. Pass [preparedPath] when already downscaled.
+  Future<String?> extractFastText(
+    String path, {
+    String? preparedPath,
+  }) async {
+    final preferred = preparedPath ?? path;
+    if (!await File(preferred).exists()) return null;
 
-    File? temp;
+    File? ownedTemp;
     try {
-      final inputPath = await _fastInputPath(path);
-      if (inputPath != path) temp = File(inputPath);
-      final input = InputImage.fromFilePath(inputPath);
-      final result = await _recognizer.processImage(input);
-      final text = result.text.trim();
-      if (kDebugMode) {
-        debugPrint(
-          'OCR(fast)[$path]: ${text.isEmpty ? '<empty>' : text.replaceAll('\n', ' | ')}',
-        );
+      var inputPath = preferred;
+      if (preparedPath == null) {
+        inputPath = await _fastInputPath(path);
+        if (inputPath != path) ownedTemp = File(inputPath);
       }
-      return text.isEmpty ? null : text;
+
+      final slot = await _acquire();
+      try {
+        final input = InputImage.fromFilePath(inputPath);
+        final result = await _recognizers[slot].processImage(input);
+        final text = result.text.trim();
+        if (kDebugMode) {
+          debugPrint(
+            'OCR(fast)[$path]: ${text.isEmpty ? '<empty>' : text.replaceAll('\n', ' | ')}',
+          );
+        }
+        return text.isEmpty ? null : text;
+      } finally {
+        _release(slot);
+      }
     } catch (error, stack) {
       debugPrint('OCR(mlkit) failed for $path: $error\n$stack');
       return null;
     } finally {
-      if (temp != null) {
+      if (ownedTemp != null) {
         try {
-          await temp.delete();
+          await ownedTemp.delete();
         } catch (_) {}
       }
     }
   }
 
-  /// Downscale large gallery photos before ML Kit; leave small files alone.
   Future<String> _fastInputPath(String path) async {
-    try {
-      final bytes = await compute(_downscaleForFastOcr, path);
-      if (bytes == null) return path;
-      final temp = File(
-        '${Directory.systemTemp.path}'
-        '${Platform.pathSeparator}pinpic_ocr_${identityHashCode(path)}_${DateTime.now().microsecondsSinceEpoch}.jpg',
-      );
-      await temp.writeAsBytes(bytes, flush: true);
-      return temp.path;
-    } catch (_) {
-      return path;
-    }
+    final prepared = await FastImagePrep.preparePath(path);
+    return prepared ?? path;
   }
 
-  /// High-quality offline Cyrillic OCR (PP-OCRv5). Prefer [aggressive] for
-  /// documents so preprocess + rotation retries can recover sideways shots.
+  Future<bool> warmupDeepOcr() => _deepOcr.warmup();
+
+  /// High-quality offline Cyrillic OCR (PP-OCRv5).
   Future<String?> extractDeepText(
     String path, {
     bool aggressive = true,
   }) async {
     final file = File(path);
     if (!await file.exists()) return null;
-
-    if (!await _canDecodeAsBitmap(path)) {
-      if (kDebugMode) {
-        debugPrint('OCR(deep) skipped, not a decodable bitmap: $path');
-      }
-      return null;
-    }
 
     try {
       final text = await _deepOcr.recognize(path, aggressive: aggressive);
@@ -119,10 +133,6 @@ class OcrService {
     return pickRicherText(fast, deep) ?? mergeTexts(fast, deep);
   }
 
-  /// Deep OCR is needed unless ML Kit extracted recognisable Latin text.
-  /// ML Kit only supports Latin and often turns Cyrillic letters into
-  /// convincing-looking gibberish (for example, «БИЛЕТ»). Letter count alone
-  /// is therefore unsafe: it would skip deep OCR for exactly these documents.
   bool needsDeepText(String? fastText) {
     final text = fastText?.trim() ?? '';
     if (text.isEmpty) return true;
@@ -159,8 +169,6 @@ class OcrService {
     return parts.join('\n');
   }
 
-  /// Prefer the richer single pass (usually deep) over a noisy merge when one
-  /// clearly dominates — keeps search keywords cleaner.
   String? pickRicherText(String? a, String? b) {
     final left = a?.trim();
     final right = b?.trim();
@@ -192,39 +200,9 @@ class OcrService {
     return letters + cyrillic * 2 + digits + text.length ~/ 5;
   }
 
-  Future<bool> _canDecodeAsBitmap(String path) async {
-    try {
-      final bytes = await File(path).readAsBytes();
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 32);
-      await codec.getNextFrame();
-      codec.dispose();
-      return true;
-    } catch (_) {
-      return false;
+  Future<void> dispose() async {
+    for (final recognizer in _recognizers) {
+      await recognizer.close();
     }
-  }
-
-  Future<void> dispose() => _recognizer.close();
-}
-
-/// Returns JPEG bytes when [path] is larger than [OcrService.fastOcrMaxEdge],
-/// otherwise null (caller should use the original file).
-Uint8List? _downscaleForFastOcr(String path) {
-  try {
-    final raw = File(path).readAsBytesSync();
-    final decoded = img.decodeImage(raw);
-    if (decoded == null) return null;
-    final maxEdge = math.max(decoded.width, decoded.height);
-    if (maxEdge <= OcrService.fastOcrMaxEdge) return null;
-    final scale = OcrService.fastOcrMaxEdge / maxEdge;
-    final resized = img.copyResize(
-      decoded,
-      width: math.max(1, (decoded.width * scale).round()),
-      height: math.max(1, (decoded.height * scale).round()),
-      interpolation: img.Interpolation.average,
-    );
-    return Uint8List.fromList(img.encodeJpg(resized, quality: 78));
-  } catch (_) {
-    return null;
   }
 }

@@ -52,6 +52,28 @@ void main() {
   test('keeps amount digits from messy query', () {
     expect(parser.parse('примерно 4990').digitTokens, contains('4990'));
     expect(parser.parse('примерно 4 990').digitTokens, contains('4990'));
+    expect(parser.parse('чек на 2.4к').digitTokens, contains('2400'));
+    expect(parser.parse('чек на 5 тысяч').digitTokens, contains('5000'));
+  });
+
+  test('parses relative and seasonal date hints', () {
+    final now = DateTime(2026, 8, 3); // Monday
+    final yesterday = parser.parse('чек вчера', now: now);
+    expect(yesterday.dateFrom, DateTime(2026, 8, 2));
+    expect(yesterday.dateTo, DateTime(2026, 8, 3));
+
+    final january = parser.parse('икея в январе', now: now);
+    expect(january.dateFrom, DateTime(2026, 1, 1));
+    expect(january.dateTo, DateTime(2026, 2, 1));
+    expect(january.meaningfulTokens, contains('икея'));
+
+    final winter = parser.parse('икея прошлой зимой', now: now);
+    expect(winter.dateFrom, DateTime(2025, 12, 1));
+    expect(winter.dateTo, DateTime(2026, 3, 1));
+
+    // «билет» must not trigger summer via «лет».
+    final ticket = parser.parse('билет', now: now);
+    expect(ticket.hasDateHint, isFalse);
   });
 
   test('fuzzy stem finds паспорт from пасп', () {

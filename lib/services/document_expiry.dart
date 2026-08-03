@@ -1,4 +1,4 @@
-/// Simple document validity badge — no reminders / notifications.
+/// Simple document validity badge. Reminders live in [ExpiryReminderService].
 enum DocumentValidity { valid, expiringSoon, expired }
 
 class DocumentExpiryStatus {

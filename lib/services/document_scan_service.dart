@@ -34,13 +34,15 @@ class DocumentScanService {
     KeywordEngine? keywordEngine,
     LocalSemanticEmbeddingService? embeddingService,
     DocumentSummaryService? summaryService,
+    void Function(PhotoEntity photo)? onPhotoIndexed,
   }) : _photos = photoRepository,
        _settings = settingsRepository,
        _ocr = ocrService ?? OcrService(),
        _categories = categoryEngine ?? CategoryEngine(),
        _keywords = keywordEngine ?? KeywordEngine(),
        _embeddings = embeddingService ?? LocalSemanticEmbeddingService(),
-       _summaries = summaryService ?? DocumentSummaryService();
+       _summaries = summaryService ?? DocumentSummaryService(),
+       _onPhotoIndexed = onPhotoIndexed;
 
   final PhotoRepository _photos;
   final SettingsRepository _settings;
@@ -49,6 +51,7 @@ class DocumentScanService {
   final KeywordEngine _keywords;
   final LocalSemanticEmbeddingService _embeddings;
   final DocumentSummaryService _summaries;
+  final void Function(PhotoEntity photo)? _onPhotoIndexed;
 
   Future<DocumentScanResult> ingestFile(String sourcePath) async {
     final source = File(sourcePath);
@@ -132,6 +135,7 @@ class DocumentScanService {
     _summaries.applyToPhoto(photo, entities, fallbackTitle: category);
 
     await _photos.upsertAll([photo]);
+    _onPhotoIndexed?.call(photo);
     final indexed = await _photos.countAll();
     final categories = await _photos.distinctCategories();
     await _settings.updateIndexStats(

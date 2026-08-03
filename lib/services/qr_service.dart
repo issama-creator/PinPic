@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
@@ -10,16 +12,35 @@ class QrScanResult {
 }
 
 class QrService {
-  QrService()
-    : _scanner = BarcodeScanner(
-        formats: [
-          BarcodeFormat.qrCode,
-          BarcodeFormat.aztec,
-          BarcodeFormat.dataMatrix,
-        ],
-      );
+  QrService({int poolSize = 2})
+    : _scanners = List<BarcodeScanner>.generate(
+        poolSize.clamp(1, 4),
+        (_) => BarcodeScanner(formats: [BarcodeFormat.qrCode]),
+        growable: false,
+      ) {
+    _available.addAll(List<int>.generate(_scanners.length, (i) => i));
+  }
 
-  final BarcodeScanner _scanner;
+  final List<BarcodeScanner> _scanners;
+  final List<int> _available = <int>[];
+  final Queue<Completer<int>> _waiters = Queue<Completer<int>>();
+
+  Future<int> _acquire() {
+    if (_available.isNotEmpty) {
+      return Future<int>.value(_available.removeLast());
+    }
+    final gate = Completer<int>();
+    _waiters.add(gate);
+    return gate.future;
+  }
+
+  void _release(int index) {
+    if (_waiters.isNotEmpty) {
+      _waiters.removeFirst().complete(index);
+    } else {
+      _available.add(index);
+    }
+  }
 
   Future<QrScanResult> scan(String path) async {
     final file = File(path);
@@ -27,8 +48,9 @@ class QrService {
       return const QrScanResult(hasQr: false);
     }
 
+    final slot = await _acquire();
     try {
-      final barcodes = await _scanner.processImage(
+      final barcodes = await _scanners[slot].processImage(
         InputImage.fromFilePath(path),
       );
       if (barcodes.isEmpty) {
@@ -45,8 +67,14 @@ class QrService {
       );
     } catch (_) {
       return const QrScanResult(hasQr: false);
+    } finally {
+      _release(slot);
     }
   }
 
-  Future<void> dispose() => _scanner.close();
+  Future<void> dispose() async {
+    for (final scanner in _scanners) {
+      await scanner.close();
+    }
+  }
 }

@@ -14,6 +14,12 @@ class AppSettingsEntity {
 
   bool initialScanCompleted = false;
 
+  /// Opt-in local reminders for document expiry dates.
+  bool expiryRemindersEnabled = false;
+
+  /// Soft-ask for notification permission was already shown once.
+  bool expiryReminderPromptShown = false;
+
   int totalPhotosFound = 0;
 
   int totalIndexed = 0;
@@ -37,6 +43,8 @@ class AppSettingsEntity {
       permissionRequested = false,
       permissionGranted = false,
       initialScanCompleted = false,
+      expiryRemindersEnabled = false,
+      expiryReminderPromptShown = false,
       totalPhotosFound = 0,
       totalIndexed = 0,
       totalCategories = 0,

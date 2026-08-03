@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinpic/core/providers/core_providers.dart';
 import 'package:pinpic/routes/route_paths.dart';
+import 'package:pinpic/services/category_engine.dart';
 import 'package:pinpic/services/search_service.dart';
+import 'package:pinpic/shared/models/index_progress.dart';
 import 'package:pinpic/theme/app_colors.dart';
 import 'package:pinpic/widgets/app_scaffold.dart';
 import 'package:pinpic/widgets/async_state_view.dart';
-import 'package:pinpic/widgets/photo_thumbnail.dart';
-import 'package:pinpic/widgets/smart_memory_card.dart';
+import 'package:pinpic/widgets/fact_memory_tile.dart';
 
 class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({
@@ -162,28 +163,11 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       );
     }
     if (_hits.isEmpty) {
-      final isCategoryOnly =
-          widget.query.trim().isEmpty && widget.category != null;
-      return Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ничего не найдено',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isCategoryOnly
-                  ? 'В этой категории пока нет проиндексированных фото'
-                  : 'Попробуйте: документ, чек, паспорт, QR',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
-            ),
-          ],
-        ),
+      return _EmptyResults(
+        query: widget.query,
+        category: widget.category,
+        favoritesOnly: widget.favoritesOnly,
+        indexing: ref.watch(indexProgressProvider),
       );
     }
 
@@ -244,21 +228,19 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   Widget _resultGrid(BuildContext context, List<SearchHit> hits) {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-      sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate((context, index) {
+      sliver: SliverList.separated(
+        itemCount: hits.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
           final hit = hits[index];
-          return _ResultCard(
-            hit: hit,
+          return FactMemoryTile(
+            photo: hit.photo,
+            confidence: hit.confidence,
+            evidence: hit.evidence.take(2).toList(growable: false),
             onTap: () =>
                 context.push(RoutePaths.photoDetailsPath(hit.photo.mediaId)),
           );
-        }, childCount: hits.length),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.55,
-        ),
+        },
       ),
     );
   }
@@ -274,157 +256,97 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 }
 
-String _friendlyEvidence(String value) => value;
+class _EmptyResults extends StatelessWidget {
+  const _EmptyResults({
+    required this.query,
+    required this.category,
+    required this.favoritesOnly,
+    required this.indexing,
+  });
 
-class _ResultCard extends ConsumerWidget {
-  const _ResultCard({required this.hit, required this.onTap});
+  final String query;
+  final String? category;
+  final bool favoritesOnly;
+  final IndexProgress indexing;
 
-  final SearchHit hit;
-  final VoidCallback onTap;
+  static const _categoryIcons = <String, IconData>{
+    CategoryEngine.receipts: Icons.receipt_long_outlined,
+    CategoryEngine.tickets: Icons.confirmation_number_outlined,
+    CategoryEngine.passports: Icons.badge_outlined,
+    CategoryEngine.passwords: Icons.wifi_password_rounded,
+    CategoryEngine.qr: Icons.qr_code_2_rounded,
+    CategoryEngine.warranties: Icons.verified_outlined,
+    CategoryEngine.businessCards: Icons.contact_page_outlined,
+    CategoryEngine.documents: Icons.description_outlined,
+  };
+
+  static const _tips = <String>[
+    'чек вчера',
+    'пароль вайфай',
+    'билет',
+    'паспорт',
+    'QR',
+  ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final chips = hit.evidence.isEmpty
-        ? <String>[hit.reason]
-        : hit.evidence.map(_friendlyEvidence).take(3).toList(growable: false);
+  Widget build(BuildContext context) {
+    final isCategoryOnly = query.trim().isEmpty && category != null;
+    final indexingBusy = indexing.isRunning;
+    final icon = favoritesOnly
+        ? Icons.favorite_border_rounded
+        : (_categoryIcons[category] ?? Icons.search_off_rounded);
 
-    return Material(
-      color: const Color(0xFF16161F),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    PhotoThumbnail(
-                      mediaId: hit.photo.mediaId,
-                      filePath: hit.photo.path,
-                      width: 240,
-                      height: 240,
-                    ),
-                    Positioned(
-                      right: 8,
-                      bottom: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.purple.withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          '${hit.confidence}%',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SmartMemoryCard(photo: hit.photo, compact: true),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      for (final chip in chips)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF242430),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            chip,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          hit.photo.dateTaken == null
-                              ? 'Дата неизвестна'
-                              : MaterialLocalizations.of(
-                                  context,
-                                ).formatShortDate(hit.photo.dateTaken!),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: hit.photo.isFavorite
-                            ? 'Убрать из избранного'
-                            : 'В избранное',
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 26,
-                          height: 26,
-                        ),
-                        onPressed: () async {
-                          await ref
-                              .read(photoRepositoryProvider)
-                              .setFavorite(
-                                hit.photo.mediaId,
-                                !hit.photo.isFavorite,
-                              );
-                          ref.invalidate(favoritesProvider);
-                          ref.read(searchServiceProvider).invalidateCaches();
-                        },
-                        icon: Icon(
-                          hit.photo.isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          size: 18,
-                          color: hit.photo.isFavorite
-                              ? AppColors.purple
-                              : AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    final String title;
+    final String description;
+    if (favoritesOnly) {
+      title = 'В избранном пусто';
+      description =
+          'Отметьте чек, пароль или документ — где важен текст или код.';
+    } else if (indexingBusy && isCategoryOnly) {
+      title = 'Пока пусто';
+      description =
+          'Память ещё собирается. $category появятся здесь, '
+          'когда PinPic прочитает текст на фото. '
+          'Это не поиск пейзажей и котов.';
+    } else if (isCategoryOnly) {
+      title = 'Пока нет «$category»';
+      description =
+          'PinPic ищет важное с текстом и кодами в галерее — '
+          'не все фото подряд. Если документ есть, подождите обновления '
+          'памяти или попробуйте поиск как помните.';
+    } else {
+      title = 'Ничего не найдено';
+      description =
+          indexingBusy
+          ? 'По запросу «$query» пока пусто. Память ещё собирается — '
+                'попробуйте сумму, дату («вчера») или другое слово.'
+          : 'По запросу «$query» в памяти ничего нет. '
+                'PinPic помнит чеки, пароли, билеты и коды — '
+                'не «найди кота». Попробуйте иначе или откройте коллекцию.';
+    }
+
+    return AppEmptyState(
+      icon: icon,
+      title: title,
+      description: description,
+      suggestions: favoritesOnly || isCategoryOnly ? const [] : _tips,
+      onSuggestion: favoritesOnly || isCategoryOnly
+          ? null
+          : (tip) {
+              context.pushReplacement(
+                '${RoutePaths.results}?q=${Uri.encodeQueryComponent(tip)}',
+              );
+            },
+      primaryLabel: isCategoryOnly || favoritesOnly
+          ? 'На главную'
+          : 'Изменить запрос',
+      onPrimary: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(RoutePaths.home);
+        }
+      },
     );
   }
 }

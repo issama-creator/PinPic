@@ -137,6 +137,32 @@ void main() {
     expect(ocr.deepCalls, 0);
   });
 
+  test('resumes persisted deep OCR backlog after interrupt', () async {
+    final device = _device('resume');
+    final photos = _FakePhotos()
+      ..items['resume'] = (_entity('resume', hash: _hash(device))
+        ..needsDeepOcr = true
+        ..ocrText = '156 456');
+    final ocr = _FakeOcr(
+      fastResult: 'ignored',
+      deepResult: 'БИЛЕТ НА КОНЦЕРТ',
+      appendPath: false,
+    );
+    final service = _service(
+      media: _FakeMedia([device]),
+      photos: photos,
+      ocr: ocr,
+    );
+    addTearDown(service.dispose);
+
+    await service.start();
+
+    expect(ocr.fastCalls, 0);
+    expect(ocr.deepCalls, 1);
+    expect(photos.items['resume']!.needsDeepOcr, isFalse);
+    expect(photos.items['resume']!.ocrText, contains('БИЛЕТ'));
+  });
+
   test('stop pauses without false 100 percent and resume completes', () async {
     final devices = List.generate(30, (index) => _device('photo-$index'));
     final photos = _FakePhotos();
@@ -266,6 +292,14 @@ class _FakePhotos extends PhotoRepository {
   Future<PhotoEntity?> findByMediaId(String mediaId) async => items[mediaId];
 
   @override
+  Future<List<PhotoEntity>> findNeedingDeepOcr({int limit = 500}) async {
+    return items.values
+        .where((photo) => photo.needsDeepOcr)
+        .take(limit)
+        .toList();
+  }
+
+  @override
   Future<void> upsertAll(List<PhotoEntity> photos) async {
     for (final photo in photos) {
       items[photo.mediaId] = photo;
@@ -287,6 +321,19 @@ class _FakePhotos extends PhotoRepository {
 class _FakeSettings extends SettingsRepository {
   _FakeSettings() : super(DatabaseService());
 
+  final AppSettingsEntity current = AppSettingsEntity.initial();
+
+  @override
+  Future<AppSettingsEntity> getSettings() async => current;
+
+  @override
+  Future<AppSettingsEntity> update(
+    void Function(AppSettingsEntity settings) mutate,
+  ) async {
+    mutate(current);
+    return current;
+  }
+
   @override
   Future<AppSettingsEntity> updateIndexStats({
     required int totalPhotosFound,
@@ -295,13 +342,18 @@ class _FakeSettings extends SettingsRepository {
     bool initialScanCompleted = false,
     int? indexedPipelineVersion,
   }) async {
-    final settings = AppSettingsEntity.initial()
+    current
       ..totalPhotosFound = totalPhotosFound
       ..totalIndexed = totalIndexed
       ..totalCategories = totalCategories
-      ..initialScanCompleted = initialScanCompleted
-      ..indexedPipelineVersion = indexedPipelineVersion ?? 0;
-    return settings;
+      ..lastIndexedAt = DateTime.now();
+    if (indexedPipelineVersion != null) {
+      current.indexedPipelineVersion = indexedPipelineVersion;
+    }
+    if (initialScanCompleted) {
+      current.initialScanCompleted = true;
+    }
+    return current;
   }
 }
 
@@ -324,7 +376,10 @@ class _FakeOcr extends OcrService {
   int get calls => fastCalls;
 
   @override
-  Future<String?> extractFastText(String path) async {
+  Future<String?> extractFastText(
+    String path, {
+    String? preparedPath,
+  }) async {
     fastCalls++;
     if (delay > Duration.zero) await Future<void>.delayed(delay);
     if (path == corruptPath) throw StateError('damaged');
@@ -346,6 +401,9 @@ class _FakeOcr extends OcrService {
     final text = fastText?.trim() ?? '';
     return text.isEmpty || RegExp(r'[a-zA-Z]').allMatches(text).length < 8;
   }
+
+  @override
+  Future<bool> warmupDeepOcr() async => true;
 
   @override
   Future<void> dispose() async {}

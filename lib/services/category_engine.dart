@@ -118,6 +118,11 @@ class CategoryEngine {
     'пароль': passwords,
     'пароли': passwords,
     'password': passwords,
+    'qr': qr,
+    'qrкод': qr,
+    'qr-код': qr,
+    'qrcode': qr,
+    'штрихкод': qr,
   };
 
   /// Returns every indexed category a query is allowed to broaden into.

@@ -60,9 +60,21 @@ class PinpicOcr {
     aggressive: Boolean = true,
   ): String {
     if (!ensureLoaded(assetManager)) return ""
+    val bounds =
+      BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+      }
+    BitmapFactory.decodeFile(path, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return ""
+
+    var sampleSize = 1
+    while (max(bounds.outWidth, bounds.outHeight) / sampleSize > MAX_DECODE_SIDE) {
+      sampleSize *= 2
+    }
     val options =
       BitmapFactory.Options().apply {
         inPreferredConfig = Bitmap.Config.ARGB_8888
+        inSampleSize = sampleSize
       }
     val decoded = BitmapFactory.decodeFile(path, options) ?: return ""
     val recycleBin = ArrayList<Bitmap>(6)
@@ -118,6 +130,9 @@ class PinpicOcr {
   companion object {
     private const val TARGET_MIN_SIDE = 1280
     private const val TARGET_MAX_SIDE = 2400
+    // PP-OCR preprocesses around 2400 px; decoding 12–50 MP originals wastes
+    // memory and time without adding recognition detail.
+    private const val MAX_DECODE_SIDE = 3200
     private const val GOOD_SCORE = 28
 
     init {

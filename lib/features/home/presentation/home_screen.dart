@@ -109,7 +109,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _resumeIndexing());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_resumeIndexing());
+      unawaited(_maybeAskExpiryReminders());
+    });
   }
 
   @override
@@ -140,6 +143,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return;
     }
     unawaited(ref.read(indexProgressProvider.notifier).start());
+  }
+
+  Future<void> _maybeAskExpiryReminders() async {
+    final settings = await ref.read(settingsRepositoryProvider).getSettings();
+    if (settings.expiryReminderPromptShown || settings.expiryRemindersEnabled) {
+      return;
+    }
+    final sample = await ref
+        .read(photoRepositoryProvider)
+        .getExpiringSoon(limit: 1);
+    if (sample.isEmpty || !mounted) return;
+
+    final enable = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Напоминать о сроках?'),
+        content: const Text(
+          'PinPic нашёл документ со сроком действия. '
+          'Можно получать локальные напоминания на этом устройстве — '
+          'без облака и аккаунта.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Не сейчас'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Включить'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    if (enable == true) {
+      final granted = await ref
+          .read(expiryReminderServiceProvider)
+          .requestPermission();
+      await ref
+          .read(settingsRepositoryProvider)
+          .setExpiryRemindersEnabled(granted);
+      if (granted) {
+        final photos = await ref
+            .read(photoRepositoryProvider)
+            .getWithExpiry(limit: 200);
+        await ref.read(expiryReminderServiceProvider).syncPhotos(photos);
+      }
+    } else {
+      await ref
+          .read(settingsRepositoryProvider)
+          .markExpiryReminderPromptShown();
+    }
+    ref.invalidate(appSettingsProvider);
   }
 
   void _openResults(String query) {
@@ -213,6 +270,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   _FavoritesTab(
                     onOpenPhoto: (mediaId) =>
                         context.push(RoutePaths.photoDetailsPath(mediaId)),
+                    onGoSearch: () => setState(() => _tab = 0),
                   ),
                   const SettingsScreen(embedded: true),
                 ],
@@ -303,18 +361,18 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-            child: const _HomeBrand(),
-          ),
-        ),
-        ContainedSliver(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-            child: _InlineSearchField(
-              controller: _controller,
-              focusNode: _focusNode,
-              onFilters: widget.onOpenFilters,
-              onSubmitted: _submit,
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            child: Column(
+              children: [
+                const _HomeBrand(),
+                const SizedBox(height: 22),
+                _InlineSearchField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  onFilters: widget.onOpenFilters,
+                  onSubmitted: _submit,
+                ),
+              ],
             ),
           ),
         ),
@@ -359,6 +417,73 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
             ),
           ),
         if (!typing) ...[
+          ref.watch(expiringSoonProvider).when(
+            data: (expiring) {
+              if (expiring.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: _HabitRail(
+                    title: 'Скоро истекает',
+                    photos: expiring,
+                    onOpenPhoto: widget.onOpenPhoto,
+                  ),
+                ),
+              );
+            },
+            loading: () =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+          ),
+          ref.watch(yesterdayDocumentsProvider).when(
+            data: (yesterday) {
+              if (yesterday.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: _HabitRail(
+                    title: 'Вчерашнее важное',
+                    photos: yesterday,
+                    onOpenPhoto: widget.onOpenPhoto,
+                    trailingAction: (
+                      label: 'Вчерашний чек',
+                      onTap: () => widget.onOpenResults('чек вчера'),
+                    ),
+                  ),
+                ),
+              );
+            },
+            loading: () =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+          ),
+          ref.watch(recentDocumentsProvider).when(
+            data: (recent) {
+              if (recent.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: _HabitRail(
+                    title: 'Недавно важное',
+                    photos: recent,
+                    onOpenPhoto: widget.onOpenPhoto,
+                  ),
+                ),
+              );
+            },
+            loading: () =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
+          ),
           pinnedAsync.when(
             data: (pinned) {
               if (pinned.isEmpty) {
@@ -367,37 +492,10 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
               return SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Закреплённые',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: style.text,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 108,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: pinned.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 10),
-                          itemBuilder: (context, index) {
-                            final photo = pinned[index];
-                            return _PinnedTile(
-                              photo: photo,
-                              onTap: () =>
-                                  widget.onOpenPhoto(photo.mediaId),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  child: _HabitRail(
+                    title: 'Закреплённые',
+                    photos: pinned,
+                    onOpenPhoto: widget.onOpenPhoto,
                   ),
                 ),
               );
@@ -409,7 +507,30 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.push(RoutePaths.scanDocument),
+                  icon: Icon(
+                    Icons.add_a_photo_outlined,
+                    color: style.accent,
+                    size: 20,
+                  ),
+                  label: Text(
+                    'Добавить важное фото',
+                    style: TextStyle(
+                      color: style.accent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Text(
                 'Коллекции',
                 style: TextStyle(
@@ -523,6 +644,8 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                     documents += counts[category] ?? 0;
                   }
 
+                      final sampleHint =
+                      ref.watch(sampleMemoryHintProvider).asData?.value;
                   return _MemoryStatusCard(
                     rememberedLabel: formatter.format(indexedCount),
                     withTextLabel: formatter.format(stats.withOcr),
@@ -533,6 +656,10 @@ class _SearchTabState extends ConsumerState<_SearchTab> {
                     status: progress.status,
                     stage: progress.stage,
                     errorMessage: progress.errorMessage,
+                    sampleHint: sampleHint,
+                    onTrySample: sampleHint == null
+                        ? null
+                        : () => widget.onOpenResults(sampleHint),
                     onResume: () =>
                         ref.read(indexProgressProvider.notifier).start(),
                   );
@@ -636,24 +763,27 @@ class _HomeBrand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = _HomeStyle.of(context);
-    return Text.rich(
-      TextSpan(
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          height: 1.05,
-          letterSpacing: -0.6,
+    return Center(
+      child: Text.rich(
+        textAlign: TextAlign.center,
+        TextSpan(
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            height: 1.05,
+            letterSpacing: -0.5,
+          ),
+          children: [
+            TextSpan(
+              text: 'Pin',
+              style: TextStyle(color: style.text),
+            ),
+            TextSpan(
+              text: 'Pic',
+              style: TextStyle(color: style.accent),
+            ),
+          ],
         ),
-        children: [
-          TextSpan(
-            text: 'Pin',
-            style: TextStyle(color: style.text),
-          ),
-          TextSpan(
-            text: 'Pic',
-            style: TextStyle(color: style.accent),
-          ),
-        ],
       ),
     );
   }
@@ -676,11 +806,11 @@ class _InlineSearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = _HomeStyle.of(context);
     return Container(
-      height: 52,
+      height: 64,
       decoration: BoxDecoration(
         color: style.searchFill,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: style.border),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: style.border, width: 1.2),
       ),
       alignment: Alignment.center,
       child: ListenableBuilder(
@@ -693,9 +823,10 @@ class _InlineSearchField extends StatelessWidget {
             textInputAction: TextInputAction.search,
             onSubmitted: onSubmitted,
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w400,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
               color: style.text,
+              letterSpacing: -0.2,
             ),
             cursorColor: style.accent,
             decoration: InputDecoration(
@@ -704,14 +835,14 @@ class _InlineSearchField extends StatelessWidget {
               fillColor: Colors.transparent,
               hintText: 'Что вы помните?',
               hintStyle: TextStyle(
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: FontWeight.w400,
                 color: style.muted,
               ),
               prefixIcon: Icon(
                 Icons.search_rounded,
                 color: style.muted,
-                size: 22,
+                size: 26,
               ),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -723,7 +854,7 @@ class _InlineSearchField extends StatelessWidget {
                       icon: Icon(
                         Icons.close_rounded,
                         color: style.muted,
-                        size: 20,
+                        size: 22,
                       ),
                     ),
                   IconButton(
@@ -731,19 +862,26 @@ class _InlineSearchField extends StatelessWidget {
                     icon: Icon(
                       Icons.tune_rounded,
                       color: style.accent,
-                      size: 22,
+                      size: 24,
                     ),
                   ),
                 ],
               ),
               suffixIconConstraints: BoxConstraints(
-                minWidth: hasText ? 96 : 48,
-                minHeight: 48,
+                minWidth: hasText ? 100 : 52,
+                minHeight: 56,
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 52,
+                minHeight: 56,
               ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 18,
+              ),
             ),
           );
         },
@@ -959,6 +1097,78 @@ class _CategoryTile extends StatelessWidget {
   }
 }
 
+class _HabitRail extends StatelessWidget {
+  const _HabitRail({
+    required this.title,
+    required this.photos,
+    required this.onOpenPhoto,
+    this.trailingAction,
+  });
+
+  final String title;
+  final List<PhotoEntity> photos;
+  final ValueChanged<String> onOpenPhoto;
+  final ({String label, VoidCallback onTap})? trailingAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _HomeStyle.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: style.text,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ),
+            if (trailingAction != null)
+              TextButton(
+                onPressed: trailingAction!.onTap,
+                style: TextButton.styleFrom(
+                  foregroundColor: style.accent,
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  trailingAction!.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 108,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: photos.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final photo = photos[index];
+              return _PinnedTile(
+                photo: photo,
+                onTap: () => onOpenPhoto(photo.mediaId),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _MemoryStatusCard extends StatelessWidget {
   const _MemoryStatusCard({
     required this.rememberedLabel,
@@ -971,6 +1181,8 @@ class _MemoryStatusCard extends StatelessWidget {
     required this.onResume,
     this.isRunning = false,
     this.errorMessage,
+    this.sampleHint,
+    this.onTrySample,
   });
 
   final String rememberedLabel;
@@ -983,6 +1195,8 @@ class _MemoryStatusCard extends StatelessWidget {
   final IndexingStage stage;
   final String? errorMessage;
   final VoidCallback onResume;
+  final String? sampleHint;
+  final VoidCallback? onTrySample;
 
   @override
   Widget build(BuildContext context) {
@@ -990,8 +1204,8 @@ class _MemoryStatusCard extends StatelessWidget {
     final headline = switch (status) {
       IndexingStatus.running =>
         stage == IndexingStage.fast
-            ? 'Запоминаем галерею'
-            : 'Память готова',
+            ? 'Память собирается…'
+            : 'Память уже работает',
       IndexingStatus.paused => 'Память на паузе',
       IndexingStatus.failed => 'Не удалось обновить память',
       IndexingStatus.completed => 'Память готова',
@@ -1002,14 +1216,15 @@ class _MemoryStatusCard extends StatelessWidget {
     final subtitle = switch (status) {
       IndexingStatus.running =>
         stage == IndexingStage.fast
-            ? 'Поиск уже можно пробовать'
+            ? 'Уже можно искать — коллекции наполнятся по мере чтения'
             : 'Уточняем текст в фоне',
       IndexingStatus.paused => 'Продолжите, когда удобно',
       IndexingStatus.failed => errorMessage ?? 'Нажмите, чтобы повторить',
-      IndexingStatus.completed => 'Спросите то, что помните',
+      IndexingStatus.completed =>
+        'Чеки, пароли, билеты и коды — не пейзажи и «найди кота»',
       IndexingStatus.idle =>
         progress <= 0
-            ? 'Откройте доступ и начните'
+            ? 'Откройте доступ к галерее — PinPic запомнит важное с текстом'
             : 'Спросите то, что помните',
     };
 
@@ -1149,6 +1364,34 @@ class _MemoryStatusCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (sampleHint != null && onTrySample != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              busy ? 'Уже нашлось — попробуйте' : 'Попробуйте найти',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: style.muted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ActionChip(
+              avatar: Icon(
+                Icons.search_rounded,
+                size: 18,
+                color: style.accent,
+              ),
+              label: Text(sampleHint!),
+              backgroundColor: style.accent.withValues(alpha: 0.12),
+              side: BorderSide(color: style.accent.withValues(alpha: 0.35)),
+              labelStyle: TextStyle(
+                color: style.text,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+              onPressed: onTrySample,
             ),
           ],
         ],
@@ -1412,9 +1655,13 @@ class _NavItem extends StatelessWidget {
 }
 
 class _FavoritesTab extends ConsumerStatefulWidget {
-  const _FavoritesTab({required this.onOpenPhoto});
+  const _FavoritesTab({
+    required this.onOpenPhoto,
+    required this.onGoSearch,
+  });
 
   final ValueChanged<String> onOpenPhoto;
+  final VoidCallback onGoSearch;
 
   @override
   ConsumerState<_FavoritesTab> createState() => _FavoritesTabState();
@@ -1503,39 +1750,14 @@ class _FavoritesTabState extends ConsumerState<_FavoritesTab> {
       );
     }
     if (_items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.star_outline_rounded,
-                size: 48,
-                color: _HomeStyle.of(context).muted,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Избранное',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: _HomeStyle.of(context).text,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Здесь появятся фото, которые вы отметите.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.4,
-                  color: _HomeStyle.of(context).muted,
-                ),
-              ),
-            ],
-          ),
-        ),
+      return AppEmptyState(
+        icon: Icons.favorite_border_rounded,
+        title: 'Избранное пусто',
+        description:
+            'Закрепите чек, пароль или билет — то, где важен текст или код. '
+            'Пейзажи и «просто фото» сюда не нужны.',
+        primaryLabel: 'К поиску',
+        onPrimary: widget.onGoSearch,
       );
     }
 

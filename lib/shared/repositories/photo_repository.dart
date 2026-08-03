@@ -1,5 +1,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:pinpic/core/errors/exceptions.dart';
+import 'package:pinpic/services/category_engine.dart';
 import 'package:pinpic/services/database_service.dart';
 import 'package:pinpic/shared/models/photo_entity.dart';
 
@@ -19,15 +20,16 @@ class PhotoRepository {
   }
 
   Future<List<String>> distinctCategories() async {
-    final photos = await _isar.photos.filter().categoryIsNotNull().findAll();
-    final categories =
-        photos
-            .map((photo) => photo.category)
-            .whereType<String>()
-            .where((value) => value.trim().isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+    final values = await _isar.photos
+        .where()
+        .distinctByCategory(caseSensitive: false)
+        .categoryProperty()
+        .findAll();
+    final categories = values
+        .whereType<String>()
+        .where((value) => value.trim().isNotEmpty)
+        .toList()
+      ..sort();
     return categories;
   }
 
@@ -44,6 +46,14 @@ class PhotoRepository {
 
   Future<PhotoEntity?> findByMediaId(String mediaId) {
     return _isar.photos.filter().mediaIdEqualTo(mediaId).findFirst();
+  }
+
+  Future<List<PhotoEntity>> findNeedingDeepOcr({int limit = 500}) {
+    return _isar.photos
+        .filter()
+        .needsDeepOcrEqualTo(true)
+        .limit(limit)
+        .findAll();
   }
 
   Future<List<PhotoEntity>> getAll({int offset = 0, int limit = 40}) {
@@ -65,21 +75,113 @@ class PhotoRepository {
         .findAll();
   }
 
-  Future<List<PhotoEntity>> getPinned({int offset = 0, int limit = 40}) async {
-    // Avoid generated `isPinnedEqualTo` call-sites: some IDE analyzers fail to
-    // resolve Isar extensions even when `flutter analyze` is clean. Pinned set
-    // is tiny, so filtering in memory is fine.
-    final photos = await _isar.photos.where().sortByDateTakenDesc().findAll();
-    final pinned =
-        photos.where((photo) => photo.isPinned).toList(growable: false);
-    if (offset >= pinned.length) return const [];
-    final end = (offset + limit).clamp(0, pinned.length);
-    return pinned.sublist(offset, end);
+  Future<List<PhotoEntity>> getPinned({int offset = 0, int limit = 40}) {
+    return _isar.photos
+        .where()
+        .isPinnedEqualTo(true)
+        .sortByDateTakenDesc()
+        .offset(offset)
+        .limit(limit)
+        .findAll();
   }
 
-  Future<int> countPinned() async {
-    final photos = await _isar.photos.where().findAll();
-    return photos.where((photo) => photo.isPinned).length;
+  Future<int> countPinned() {
+    return _isar.photos.where().isPinnedEqualTo(true).count();
+  }
+
+  /// Expired or expiring within [warnWithinDays], soonest first.
+  Future<List<PhotoEntity>> getExpiringSoon({
+    int warnWithinDays = 15,
+    int limit = 24,
+  }) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final until = today.add(Duration(days: warnWithinDays));
+    final photos = await _isar.photos
+        .filter()
+        .expiresAtIsNotNull()
+        .expiresAtLessThan(until, include: true)
+        .sortByExpiresAt()
+        .limit(limit)
+        .findAll();
+    return photos;
+  }
+
+  Future<List<PhotoEntity>> getWithExpiry({int limit = 200}) {
+    return _isar.photos
+        .filter()
+        .expiresAtIsNotNull()
+        .sortByExpiresAt()
+        .limit(limit)
+        .findAll();
+  }
+
+  /// Recently indexed document-family / receipt cards (habit rail).
+  Future<List<PhotoEntity>> getRecentDocuments({
+    Duration within = const Duration(hours: 48),
+    int limit = 24,
+  }) async {
+    final since = DateTime.now().subtract(within);
+    final photos = await _isar.photos
+        .filter()
+        .indexedAtGreaterThan(since, include: true)
+        .sortByIndexedAtDesc()
+        .limit(limit * 3)
+        .findAll();
+    return photos
+        .where((photo) {
+          final category = photo.category;
+          if (category == null) return false;
+          return CategoryEngine.documentFamily.contains(category) ||
+              category == CategoryEngine.qr;
+        })
+        .take(limit)
+        .toList(growable: false);
+  }
+
+  /// Receipts / tickets taken yesterday — second habit cue beyond "I lost something".
+  Future<List<PhotoEntity>> getYesterdayDocuments({int limit = 24}) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final photos = await _isar.photos
+        .filter()
+        .dateTakenBetween(
+          yesterday,
+          today,
+          includeLower: true,
+          includeUpper: false,
+        )
+        .sortByDateTakenDesc()
+        .limit(limit * 4)
+        .findAll();
+    return photos
+        .where((photo) {
+          final category = photo.category;
+          if (category == null) return false;
+          return category == CategoryEngine.receipts ||
+              category == CategoryEngine.tickets ||
+              category == CategoryEngine.qr ||
+              CategoryEngine.documentFamily.contains(category);
+        })
+        .take(limit)
+        .toList(growable: false);
+  }
+
+  /// Small pool for "try this" while indexing — prefer cards with text facts.
+  Future<List<PhotoEntity>> getSampleHintCandidates({int limit = 12}) async {
+    final recent = await getRecentDocuments(limit: limit);
+    if (recent.isNotEmpty) return recent;
+    final withText = await _isar.photos
+        .filter()
+        .ocrTextIsNotNull()
+        .sortByIndexedAtDesc()
+        .limit(limit * 2)
+        .findAll();
+    return withText
+        .where((photo) => (photo.ocrText?.trim().isNotEmpty ?? false))
+        .take(limit)
+        .toList(growable: false);
   }
 
   Future<void> upsert(PhotoEntity photo) async {
@@ -238,6 +340,16 @@ class PhotoRepository {
         .filter()
         .semanticEmbeddingIsNotEmpty()
         .sortByDateTakenDesc()
+        .limit(limit)
+        .findAll();
+  }
+
+  Future<List<PhotoEntity>> getWithQr({int offset = 0, int limit = 200}) {
+    return _isar.photos
+        .filter()
+        .hasQrEqualTo(true)
+        .sortByDateTakenDesc()
+        .offset(offset)
         .limit(limit)
         .findAll();
   }

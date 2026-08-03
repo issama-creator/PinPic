@@ -94,40 +94,45 @@ const PhotoEntitySchema = CollectionSchema(
       name: r'modifiedAt',
       type: IsarType.dateTime,
     ),
-    r'objects': PropertySchema(
+    r'needsDeepOcr': PropertySchema(
       id: 21,
+      name: r'needsDeepOcr',
+      type: IsarType.bool,
+    ),
+    r'objects': PropertySchema(
+      id: 22,
       name: r'objects',
       type: IsarType.stringList,
     ),
     r'ocrKeywords': PropertySchema(
-      id: 22,
+      id: 23,
       name: r'ocrKeywords',
       type: IsarType.stringList,
     ),
-    r'ocrText': PropertySchema(id: 23, name: r'ocrText', type: IsarType.string),
-    r'path': PropertySchema(id: 24, name: r'path', type: IsarType.string),
+    r'ocrText': PropertySchema(id: 24, name: r'ocrText', type: IsarType.string),
+    r'path': PropertySchema(id: 25, name: r'path', type: IsarType.string),
     r'qrPayload': PropertySchema(
-      id: 25,
+      id: 26,
       name: r'qrPayload',
       type: IsarType.string,
     ),
     r'semanticEmbedding': PropertySchema(
-      id: 26,
+      id: 27,
       name: r'semanticEmbedding',
       type: IsarType.doubleList,
     ),
     r'sizeBytes': PropertySchema(
-      id: 27,
+      id: 28,
       name: r'sizeBytes',
       type: IsarType.long,
     ),
-    r'summary': PropertySchema(id: 28, name: r'summary', type: IsarType.string),
+    r'summary': PropertySchema(id: 29, name: r'summary', type: IsarType.string),
     r'visionKeywords': PropertySchema(
-      id: 29,
+      id: 30,
       name: r'visionKeywords',
       type: IsarType.stringList,
     ),
-    r'width': PropertySchema(id: 30, name: r'width', type: IsarType.long),
+    r'width': PropertySchema(id: 31, name: r'width', type: IsarType.long),
   },
 
   estimateSize: _photoEntityEstimateSize,
@@ -318,6 +323,19 @@ const PhotoEntitySchema = CollectionSchema(
         ),
       ],
     ),
+    r'needsDeepOcr': IndexSchema(
+      id: -1610758615210310035,
+      name: r'needsDeepOcr',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'needsDeepOcr',
+          type: IndexType.value,
+          caseSensitive: false,
+        ),
+      ],
+    ),
     r'expiresAt': IndexSchema(
       id: 4994901953235663716,
       name: r'expiresAt',
@@ -470,16 +488,17 @@ void _photoEntitySerialize(
   writer.writeString(offsets[18], object.mediaId);
   writer.writeString(offsets[19], object.mimeType);
   writer.writeDateTime(offsets[20], object.modifiedAt);
-  writer.writeStringList(offsets[21], object.objects);
-  writer.writeStringList(offsets[22], object.ocrKeywords);
-  writer.writeString(offsets[23], object.ocrText);
-  writer.writeString(offsets[24], object.path);
-  writer.writeString(offsets[25], object.qrPayload);
-  writer.writeDoubleList(offsets[26], object.semanticEmbedding);
-  writer.writeLong(offsets[27], object.sizeBytes);
-  writer.writeString(offsets[28], object.summary);
-  writer.writeStringList(offsets[29], object.visionKeywords);
-  writer.writeLong(offsets[30], object.width);
+  writer.writeBool(offsets[21], object.needsDeepOcr);
+  writer.writeStringList(offsets[22], object.objects);
+  writer.writeStringList(offsets[23], object.ocrKeywords);
+  writer.writeString(offsets[24], object.ocrText);
+  writer.writeString(offsets[25], object.path);
+  writer.writeString(offsets[26], object.qrPayload);
+  writer.writeDoubleList(offsets[27], object.semanticEmbedding);
+  writer.writeLong(offsets[28], object.sizeBytes);
+  writer.writeString(offsets[29], object.summary);
+  writer.writeStringList(offsets[30], object.visionKeywords);
+  writer.writeLong(offsets[31], object.width);
 }
 
 PhotoEntity _photoEntityDeserialize(
@@ -511,16 +530,17 @@ PhotoEntity _photoEntityDeserialize(
   object.mediaId = reader.readString(offsets[18]);
   object.mimeType = reader.readStringOrNull(offsets[19]);
   object.modifiedAt = reader.readDateTimeOrNull(offsets[20]);
-  object.objects = reader.readStringList(offsets[21]) ?? [];
-  object.ocrKeywords = reader.readStringList(offsets[22]) ?? [];
-  object.ocrText = reader.readStringOrNull(offsets[23]);
-  object.path = reader.readString(offsets[24]);
-  object.qrPayload = reader.readStringOrNull(offsets[25]);
-  object.semanticEmbedding = reader.readDoubleList(offsets[26]) ?? [];
-  object.sizeBytes = reader.readLong(offsets[27]);
-  object.summary = reader.readStringOrNull(offsets[28]);
-  object.visionKeywords = reader.readStringList(offsets[29]) ?? [];
-  object.width = reader.readLong(offsets[30]);
+  object.needsDeepOcr = reader.readBool(offsets[21]);
+  object.objects = reader.readStringList(offsets[22]) ?? [];
+  object.ocrKeywords = reader.readStringList(offsets[23]) ?? [];
+  object.ocrText = reader.readStringOrNull(offsets[24]);
+  object.path = reader.readString(offsets[25]);
+  object.qrPayload = reader.readStringOrNull(offsets[26]);
+  object.semanticEmbedding = reader.readDoubleList(offsets[27]) ?? [];
+  object.sizeBytes = reader.readLong(offsets[28]);
+  object.summary = reader.readStringOrNull(offsets[29]);
+  object.visionKeywords = reader.readStringList(offsets[30]) ?? [];
+  object.width = reader.readLong(offsets[31]);
   return object;
 }
 
@@ -574,24 +594,26 @@ P _photoEntityDeserializeProp<P>(
     case 20:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 21:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 22:
       return (reader.readStringList(offset) ?? []) as P;
     case 23:
-      return (reader.readStringOrNull(offset)) as P;
-    case 24:
-      return (reader.readString(offset)) as P;
-    case 25:
-      return (reader.readStringOrNull(offset)) as P;
-    case 26:
-      return (reader.readDoubleList(offset) ?? []) as P;
-    case 27:
-      return (reader.readLong(offset)) as P;
-    case 28:
-      return (reader.readStringOrNull(offset)) as P;
-    case 29:
       return (reader.readStringList(offset) ?? []) as P;
+    case 24:
+      return (reader.readStringOrNull(offset)) as P;
+    case 25:
+      return (reader.readString(offset)) as P;
+    case 26:
+      return (reader.readStringOrNull(offset)) as P;
+    case 27:
+      return (reader.readDoubleList(offset) ?? []) as P;
+    case 28:
+      return (reader.readLong(offset)) as P;
+    case 29:
+      return (reader.readStringOrNull(offset)) as P;
     case 30:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 31:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -811,6 +833,14 @@ extension PhotoEntityQueryWhereSort
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'hasFace'),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhere> anyNeedsDeepOcr() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'needsDeepOcr'),
       );
     });
   }
@@ -2255,6 +2285,62 @@ extension PhotoEntityQueryWhere
                 indexName: r'hasFace',
                 lower: [],
                 upper: [hasFace],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause> needsDeepOcrEqualTo(
+    bool needsDeepOcr,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'needsDeepOcr',
+          value: [needsDeepOcr],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterWhereClause>
+  needsDeepOcrNotEqualTo(bool needsDeepOcr) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'needsDeepOcr',
+                lower: [],
+                upper: [needsDeepOcr],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'needsDeepOcr',
+                lower: [needsDeepOcr],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'needsDeepOcr',
+                lower: [needsDeepOcr],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'needsDeepOcr',
+                lower: [],
+                upper: [needsDeepOcr],
                 includeUpper: false,
               ),
             );
@@ -4658,6 +4744,15 @@ extension PhotoEntityQueryFilter
   }
 
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
+  needsDeepOcrEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'needsDeepOcr', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterFilterCondition>
   objectsElementEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -6361,6 +6456,19 @@ extension PhotoEntityQuerySortBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByNeedsDeepOcr() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'needsDeepOcr', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy>
+  sortByNeedsDeepOcrDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'needsDeepOcr', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> sortByOcrText() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ocrText', Sort.asc);
@@ -6676,6 +6784,19 @@ extension PhotoEntityQuerySortThenBy
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByNeedsDeepOcr() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'needsDeepOcr', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy>
+  thenByNeedsDeepOcrDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'needsDeepOcr', Sort.desc);
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QAfterSortBy> thenByOcrText() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ocrText', Sort.asc);
@@ -6893,6 +7014,12 @@ extension PhotoEntityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByNeedsDeepOcr() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'needsDeepOcr');
+    });
+  }
+
   QueryBuilder<PhotoEntity, PhotoEntity, QDistinct> distinctByObjects() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'objects');
@@ -7095,6 +7222,12 @@ extension PhotoEntityQueryProperty
   QueryBuilder<PhotoEntity, DateTime?, QQueryOperations> modifiedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'modifiedAt');
+    });
+  }
+
+  QueryBuilder<PhotoEntity, bool, QQueryOperations> needsDeepOcrProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'needsDeepOcr');
     });
   }
 

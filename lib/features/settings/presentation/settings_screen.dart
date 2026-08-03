@@ -104,6 +104,40 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
               const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(Icons.notifications_active_outlined),
+                title: const Text('Напоминания о сроках'),
+                subtitle: const Text(
+                  'Локальные уведомления о документах с датой окончания',
+                ),
+                value:
+                    settingsAsync.asData?.value.expiryRemindersEnabled ?? false,
+                onChanged: (enabled) async {
+                  if (enabled) {
+                    final granted = await ref
+                        .read(expiryReminderServiceProvider)
+                        .requestPermission();
+                    await ref
+                        .read(settingsRepositoryProvider)
+                        .setExpiryRemindersEnabled(granted);
+                    if (granted) {
+                      final photos = await ref
+                          .read(photoRepositoryProvider)
+                          .getWithExpiry(limit: 200);
+                      await ref
+                          .read(expiryReminderServiceProvider)
+                          .syncPhotos(photos);
+                    }
+                  } else {
+                    await ref
+                        .read(settingsRepositoryProvider)
+                        .setExpiryRemindersEnabled(false);
+                    await ref.read(expiryReminderServiceProvider).cancelAll();
+                  }
+                  ref.invalidate(appSettingsProvider);
+                },
+              ),
+              const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.refresh_rounded),
                 title: const Text('Переиндексировать всё'),

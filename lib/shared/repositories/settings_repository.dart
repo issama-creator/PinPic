@@ -48,11 +48,26 @@ class SettingsRepository {
       settings.permissionRequested = false;
       settings.permissionGranted = false;
       settings.initialScanCompleted = false;
+      settings.expiryRemindersEnabled = false;
+      settings.expiryReminderPromptShown = false;
       settings.totalPhotosFound = 0;
       settings.totalIndexed = 0;
       settings.totalCategories = 0;
       settings.indexedPipelineVersion = 0;
       settings.lastIndexedAt = null;
+    });
+  }
+
+  Future<AppSettingsEntity> setExpiryRemindersEnabled(bool enabled) {
+    return update((settings) {
+      settings.expiryRemindersEnabled = enabled;
+      settings.expiryReminderPromptShown = true;
+    });
+  }
+
+  Future<AppSettingsEntity> markExpiryReminderPromptShown() {
+    return update((settings) {
+      settings.expiryReminderPromptShown = true;
     });
   }
 

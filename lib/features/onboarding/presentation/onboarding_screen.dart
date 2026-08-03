@@ -340,10 +340,14 @@ class _OnboardingHeroText extends StatelessWidget {
             style: subtitleStyle,
             children: [
               const TextSpan(
-                text: 'Чек, пароль, билет, паспорт —\n',
+                text: 'Чек, пароль, билет, QR —\n',
               ),
               ...PinPicMark.spans(subtitleStyle),
-              const TextSpan(text: ' найдёт то, что вы когда‑то сфотографировали.'),
+              const TextSpan(
+                text:
+                    ' найдёт важное с текстом и кодами.\n'
+                    'Не все фото подряд и не «найди кота».',
+              ),
             ],
           ),
           textAlign: TextAlign.center,
